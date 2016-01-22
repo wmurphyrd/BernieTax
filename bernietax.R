@@ -188,7 +188,7 @@ ggplot(dat, aes(x = incomeT, y = rate, fill = expense)) +
   geom_area(position = "stack") + facet_grid(set~.) +
   scale_x_log10(labels = scales::dollar, 
                 breaks = incomelabs) +
-  theme(text = element_text(size = 18)) +
+  theme(text = element_text(size = 24)) +
   guides(fill = guide_legend("")) +
   labs(x = "Taxable Income (thousands)", 
        y = "Effective Tax Rate") +
