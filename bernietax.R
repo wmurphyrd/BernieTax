@@ -1,5 +1,8 @@
 
+useCorporateWelfare <- T
+
 # https://berniesanders.com/issues/medicare-for-all
+# https://berniesanders.com/wp-content/uploads/2016/01/friedman-memo-1.pdf
 incomeBracketsBernie <- data.frame(
   bottom = c(0, 18450, 74900, 151200, 230450, 250000, 
              499999, 2000000, 10000000),
@@ -93,14 +96,28 @@ familyLeaveBracketsBernie <- data.frame(
 #http://familiesusa.org/product/federal-poverty-guidelines
 fpl4 <- 24250
 #http://obamacarefacts.com/insurance-exchange/premium-tax-credits/
+#These brackets erroneously apply Obamacre premium credits to employer plans
+# healthPremBracketsCurrent <- data.frame(
+#   bottom = c(0, fpl4 * 1.33, fpl4 * 1.5, fpl4 * 2, fpl4 * 2.5, fpl4 * 4),
+#   cap = c(fpl4 * 1.33, fpl4 * 1.5, fpl4 * 2, fpl4 * 2.5, fpl4 * 4, Inf),
+#   #note, 250-400% of FPL has obamacare rate max of 9.66%, but this exceeds
+#   #national average, so the flat average is used instead
+#   rate = c(0, .047, .0641, .0818, 0, 0),
+#   extra = c(0, 0, 0, 0, 6408, 6408)
+# )
+
+# 35 hours per week at minmum wage is 54% of FPL (below medicaid threshold)
+# Therefore anyone earning above the medicaid threshold will should eligible for
+# employer sponsored coverage under Obamacare
 healthPremBracketsCurrent <- data.frame(
-  bottom = c(0, fpl4 * 1.33, fpl4 * 1.5, fpl4 * 2, fpl4 * 2.5, fpl4 * 4),
-  cap = c(fpl4 * 1.33, fpl4 * 1.5, fpl4 * 2, fpl4 * 2.5, fpl4 * 4, Inf),
+  bottom = c(0, fpl4 * 1.33),
+  cap = c(fpl4 * 1.33, Inf),
   #note, 250-400% of FPL has obamacare rate max of 9.66%, but this exceeds
   #national average, so the flat average is used instead
-  rate = c(0, .047, .0641, .0818, 0, 0),
-  extra = c(0, 0, 0, 0, 6408, 6408)
+  rate = c(0, 0),
+  extra = c(0, 6408)
 )
+
 
 #out of pocket expenses set at $0 for medicaid recipients, or at the
 #national average of $4,065 for all others 
@@ -142,6 +159,17 @@ payrollTaxBracketsBernie <- data.frame(
   bottom = 0, cap = Inf, rate = .1385, extra = 0
 )
 
+corpWelfareGapCurrent <- data.frame(
+ bottom = c(0, fpl4 * 1.33),
+ cap = c(fpl4 * 1.33, Inf),
+ rate = 0,
+ extra = c(14198, -14198)
+)
+
+corpWelfareGapBernie <- data.frame(
+  bottom = 0, cap = Inf, rate = 0, extra = 0
+)
+
 tax <- function(brackets, x) {
   sum(mapply(function(income, bottom, cap, rate, extra){
     if(income > cap) income <- cap
@@ -159,7 +187,7 @@ taxes <- function(incomes, brackets, ssExtra) {
                     check.names = F)
   ret$income <- incomes
   ret$effectiveIncome <- incomes + ret$`Employer Payroll Tax` +
-    ret$`Employer Healthcare\nContribution`
+    ret$`Employer Healthcare\nContribution` + ret$`Corporate Welfare`
   ret
 }
 
@@ -167,7 +195,7 @@ taxNames <- c("Income Tax", "Social Security Tax", "Medicare Tax",
                   "Medicare-for-all Tax", "Family Leave Tax", 
               "Healthcare Premiums", "Healthcare Expenses",
               "Employer Healthcare\nContribution",
-              "Employer Payroll Tax")
+              "Employer Payroll Tax", "Corporate Welfare")
 
 currentBrackets <- list(incomeBracketsCurrent,
                         ssBracketsCurrent,
@@ -177,7 +205,9 @@ currentBrackets <- list(incomeBracketsCurrent,
                         healthPremBracketsCurrent,
                         healthPocketBracketsCurrent,
                         healthEmpBracketsCurrent,
-                        payrollTaxBracketsCurrent)
+                        payrollTaxBracketsCurrent,
+                       corpWelfareGapCurrent)
+
 bernieBrackets <- list(incomeBracketsBernie,
                        ssBracketsBernie,
                        medicareBracketsCurrent,
@@ -186,13 +216,17 @@ bernieBrackets <- list(incomeBracketsBernie,
                        healthPremBracketsBernie,
                        healthPocketBracketsBernie,
                        healthEmpBracketsBernie,
-                       payrollTaxBracketsBernie)
+                       payrollTaxBracketsBernie,
+                       corpWelfareGapBernie)
 
 names(currentBrackets) <- taxNames
+if(!useCorporateWelfare) {
+  currentBrackets$`Corporate Welfare` <- corpWelfareGapBernie
+}
 names(bernieBrackets) <- taxNames
 
 incomes <- seq(20000, 400000, by = 2000)
-incomelabs <- c(24, 54, 150, 400)
+
 #incomes <- seq(20000, 5000000, by = 10000)
 
 cur <- taxes(incomes, currentBrackets)
@@ -209,8 +243,20 @@ dat <- rbind(gather(cur, expense, amount, -income, -effectiveIncome, -set),
       gather(bern, expense, amount,  -income, -effectiveIncome, -set))
 dat <- dplyr::mutate(dat, rate = amount / effectiveIncome,
                      incomeT = income / 1000)
+
+minimumWage35HoursBernie <- 15 * 35 * 52
+
+dat <- dplyr::filter(dat, 
+                     !(income < minimumWage35HoursBernie & set == "Bernie"))
+if(!useCorporateWelfare) {
+  dat <- dplyr::filter(dat, expense != "Corporate Welfare")
+}
+
+
+incomelabs <- c(20, round(minimumWage35HoursBernie/1000), 54, 150, 400)
+
 library(ggplot2)
-png("bernietax.png", width = 960, height = 960)
+#png("bernietax.png", width = 960, height = 960)
 ggplot(dat, aes(x = incomeT, y = rate, fill = expense)) + 
   geom_area(position = "stack") + facet_grid(set~.) +
   scale_x_log10(labels = scales::dollar, 
@@ -221,4 +267,4 @@ ggplot(dat, aes(x = incomeT, y = rate, fill = expense)) +
        y = "Effective Tax Rate") +
   scale_y_continuous(labels = scales::percent,
                      breaks = seq(0, .6, by = .1))
-dev.off()
+#dev.off()
