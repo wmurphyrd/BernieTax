@@ -31,4 +31,6 @@ The impact of the following [proposals from Bernie Sanders](https://berniesander
 * Renewable Energy and Clean Jobs Transition
 * Medicare for All
 
-Note that impacts on investment earnings are not included in this project. 
+Note that impacts on investment earnings are not included in this project.
+
+![Comparative Effective Tax Rates](bernietax.png)
