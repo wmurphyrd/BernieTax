@@ -116,11 +116,30 @@ healthPocketBracketsCurrent <- data.frame(
 )
 
 healthPremBracketsBernie <- data.frame(
-  bottom = 0, cap = 0, rate = 0, extra = 0
+  bottom = 0, cap = Inf, rate = 0, extra = 0
 )
 
 healthPocketBracketsBernie <- data.frame(
-  bottom = 0, cap = 0, rate = 0, extra = 0
+  bottom = 0, cap = Inf, rate = 0, extra = 0
+)
+
+healthEmpBracketsCurrent <- data.frame(
+  bottom = c(0, fpl4*1.33),
+  cap = c(fpl4*1.33, Inf),
+  rate = 0,
+  extra = c(0, 14198)
+)
+
+healthEmpBracketsBernie <- data.frame(
+  bottom = 0, cap = Inf, rate = 0, extra = 0 
+)
+
+payrollTaxBracketsCurrent <- data.frame(
+  bottom = 0, cap = Inf, rate = .0765, extra = 0
+)
+
+payrollTaxBracketsBernie <- data.frame(
+  bottom = 0, cap = Inf, rate = .1385, extra = 0
 )
 
 tax <- function(brackets, x) {
@@ -139,12 +158,16 @@ taxes <- function(incomes, brackets, ssExtra) {
   ret <- data.frame(t(sapply(incomes, function(x) sapply(brackets, tax, x))),
                     check.names = F)
   ret$income <- incomes
+  ret$effectiveIncome <- incomes + ret$`Employer Payroll Tax` +
+    ret$`Employer Healthcare\nContribution`
   ret
 }
 
 taxNames <- c("Income Tax", "Social Security Tax", "Medicare Tax",
                   "Medicare-for-all Tax", "Family Leave Tax", 
-              "Healthcare Premiums", "Healthcare Expenses")
+              "Healthcare Premiums", "Healthcare Expenses",
+              "Employer Healthcare\nContribution",
+              "Employer Payroll Tax")
 
 currentBrackets <- list(incomeBracketsCurrent,
                         ssBracketsCurrent,
@@ -152,14 +175,18 @@ currentBrackets <- list(incomeBracketsCurrent,
                         mfaBracketsCurrent,
                         familyLeaveBracketsCurrent,
                         healthPremBracketsCurrent,
-                        healthPocketBracketsCurrent)
+                        healthPocketBracketsCurrent,
+                        healthEmpBracketsCurrent,
+                        payrollTaxBracketsCurrent)
 bernieBrackets <- list(incomeBracketsBernie,
                        ssBracketsBernie,
                        medicareBracketsCurrent,
                        mfaBracketsBernie,
                        familyLeaveBracketsBernie,
                        healthPremBracketsBernie,
-                       healthPocketBracketsBernie)
+                       healthPocketBracketsBernie,
+                       healthEmpBracketsBernie,
+                       payrollTaxBracketsBernie)
 
 names(currentBrackets) <- taxNames
 names(bernieBrackets) <- taxNames
@@ -178,9 +205,9 @@ bern <- taxes(incomes, bernieBrackets)
 bern$set <- "Bernie"
 
 library(tidyr)
-dat <- rbind(gather(cur, expense, amount, -income, -set),
-      gather(bern, expense, amount,  -income, -set))
-dat <- dplyr::mutate(dat, rate = amount / income,
+dat <- rbind(gather(cur, expense, amount, -income, -effectiveIncome, -set),
+      gather(bern, expense, amount,  -income, -effectiveIncome, -set))
+dat <- dplyr::mutate(dat, rate = amount / effectiveIncome,
                      incomeT = income / 1000)
 library(ggplot2)
 png("bernietax.png", width = 960, height = 960)
@@ -193,5 +220,5 @@ ggplot(dat, aes(x = incomeT, y = rate, fill = expense)) +
   labs(x = "Taxable Income (thousands)", 
        y = "Effective Tax Rate") +
   scale_y_continuous(labels = scales::percent,
-                     breaks = seq(0, .5, by = .1))
+                     breaks = seq(0, .6, by = .1))
 dev.off()
