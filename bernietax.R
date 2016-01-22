@@ -256,7 +256,7 @@ if(!useCorporateWelfare) {
 incomelabs <- c(20, round(minimumWage35HoursBernie/1000), 54, 150, 400)
 
 library(ggplot2)
-#png("bernietax.png", width = 960, height = 960)
+png("bernietax.png", width = 960, height = 960)
 ggplot(dat, aes(x = incomeT, y = rate, fill = expense)) + 
   geom_area(position = "stack") + facet_grid(set~.) +
   scale_x_log10(labels = scales::dollar, 
@@ -267,4 +267,4 @@ ggplot(dat, aes(x = incomeT, y = rate, fill = expense)) +
        y = "Effective Tax Rate") +
   scale_y_continuous(labels = scales::percent,
                      breaks = seq(0, .6, by = .1))
-#dev.off()
+dev.off()
