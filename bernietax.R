@@ -231,11 +231,15 @@ taxes <- function(incomes, bracketsList, deductions = 0) {
   ret$income <- incomes
   ret$effectiveIncome <- incomes + 
     rowSums(ret[, na.omit(match(taxNamesEmp, names(ret)))], na.rm = T)
+  ret$agi <- pmax(incomes - deductions, 0)
   ret
 }
 
 
 incomes <- seq(20000, 450000, by = 2000)
+
+##Deductions and credits
+
 #https://www.irs.com/articles/2015-federal-tax-rates-personal-exemptions-and-standard-deductions
 standardDeduction <- 12600
 #https://www.irs.gov/publications/p17/ch03.html
@@ -245,12 +249,46 @@ exemptions <- exemptions - exemptions * exPhaseOut
 totalDeduction <- standardDeduction + exemptions
 #incomes <- seq(20000, 5000000, by = 10000)
 
+##Earned income tax credit
+#https://www.irs.gov/Credits-&-Deductions/Individuals/Earned-Income-Tax-Credit/EITC-Income-Limits-Maximum-Credit-Amounts
+#https://www.law.cornell.edu/uscode/text/26/32
+eitc <- function(inc, agi) {
+  max <- 5548
+  fullPhaseout <- 44651
+  pPhaseout <- .2106
+  pPhasein <- .4
+  #calulcate phaseout threshold based on where credit reduces to $0
+  startPhaseout <- fullPhaseout - max / pPhaseout
+  # credit = 40% of income up to max of 5548 minus 21.05% percent of agi
+  # over phaseout threshold down to a minimum credit of 0$ at agi of $44,651
+  pmin(inc * pPhasein, max) - 
+    pmin(pmax(agi - startPhaseout, 0) * pPhaseout, max)
+}
+
+##Child tax credit
+#https://www.irs.gov/publications/p972/ar02.html
+ctc <- function(agi, income, incTax, nkids = 2) {
+  incTax <- pmax(0, incTax)
+  ctc <- nkids * 1000
+  #reduce max ctc by 5% of income over $110,000 rounded up to nearest thousand
+  ctc <- pmax(ctc - pmax(ceiling((agi - 110000) / 1000) * 1000 * .05, 0), 0)
+  #creditable ctc is smaller of remaning ctc (after taxes reduced to 0) or 15%
+  #of earned income over $3K
+  actc <- pmax(pmin(ctc - incTax, .15 * pmax(income - 3000, 0)), 0)
+  #credit is full ctc up to the point that taxes are reduced to zero, plus
+  #credtiable portion of the remainder
+  pmin(ctc, incTax) + actc
+}
+
 cur <- taxes(incomes, currentIndBrackets, totalDeduction)
-cur$set <- "Current"
-cur$payer <- "Individual"
+cur <- cur %>% mutate(set = "Current", payer = "Individual",
+              `Income Tax` = `Income Tax` - eitc(income, agi),
+              `Income Tax` = `Income Tax` - ctc(agi, income, `Income Tax`))
 bern <- taxes(incomes, bernieIndBrackets, totalDeduction)
-bern$set <- "Bernie"
-bern$payer <- "Individual"
+bern <- bern %>% mutate(set = "Bernie", payer = "Individual",
+                      `Income Tax` = `Income Tax` - eitc(income, agi),
+                      `Income Tax` = `Income Tax` - 
+                        ctc(agi, income, `Income Tax`))
 curEmp <- taxes(incomes, currentEmpBrackets)
 curEmp$set <- "Current"
 curEmp$payer <- "Employer"
@@ -259,16 +297,13 @@ bernEmp$set <- "Bernie"
 bernEmp$payer <- "Employer"
 
 dat <- rbind(gather(rbind(cur, bern),
-              expense, amount, -income, -effectiveIncome, -set, -payer),
+              expense, amount, -income, -effectiveIncome, -set, -payer, -agi),
              gather(rbind(curEmp, bernEmp),
-                    expense, amount, -income, -effectiveIncome, -set, -payer))
+                    expense, amount, -income, -effectiveIncome, -set, -payer, -agi))
 # dat <- rbind(gather(cur, expense, amount, -income, -effectiveIncome, -set),
 #       gather(bern, expense, amount,  -income, -effectiveIncome, -set))
-dat <- mutate(dat, effectiveIncome = 
-                effectiveIncome + standardDeduction + exemptions,
-              income = income + standardDeduction + exemptions,
-              rate = amount / effectiveIncome,
-              incomeT = income / 1000)
+# dat <- mutate(dat, rate = amount / effectiveIncome,
+#               incomeT = income / 1000)
 
 # minimumWage35HoursBernie <- 15 * 35 * 52
 # 
@@ -292,23 +327,12 @@ dat <- mutate(dat, effectiveIncome =
 #                      breaks = seq(0, .6, by = .1))
 # #dev.off()
 
-datSum <- dat %>% group_by(payer, set, income) %>% 
-  summarize(eTax = sum(rate)) %>% ungroup %>%
-  mutate(payer = factor(payer, levels = c("Individual", "Employer")))
+#total effective tax rates
+datSum <- dat %>% group_by(payer, set, income, effectiveIncome, agi) %>% 
+  summarize(tTax = sum(amount)) %>% ungroup %>% 
+  mutate(eTax = tTax / effectiveIncome,
+         payer = factor(payer, levels = c("Individual", "Employer")))
 
-datDiff <- inner_join(filter(datSum, set == "Bernie"), 
-                      filter(datSum, set == "Current"), 
-                      by = c("payer", "income")) %>%
-  rename(eTaxBern = eTax.x, eTaxCur = eTax.y) %>%
-#   mutate(increase = eTaxBern - eTaxCur,
-#          bottom = ifelse(increase <= 0, eTaxBern, eTaxCur),
-#          dir = ifelse(increase > 0, "Increase", "Decrease")) %>%
-  # select(income, payer, top, bottom, dir)
-  mutate(increase = eTaxBern > eTaxCur,
-         iTop = ifelse(increase, eTaxBern, NA),
-         iBottom = ifelse(increase, eTaxCur, NA),
-         dTop = ifelse(!increase, eTaxCur, NA),
-         dBottom = ifelse(!increase, eTaxBern, NA))
 
 ##income distribution data from US census, 2014 family incomes
 #https://www.census.gov/hhes/www/cpstables/032015/faminc/toc.htm
@@ -317,6 +341,7 @@ acs <- acs %>% rename(income = `Mean \n Income (dollars)`) %>%
   mutate(prop = Number / sum(Number), centile = cumsum(prop),
          payer = "Population")
 getIncomeForPercentile <- approxfun(acs$centile, acs$income)
+getPercentileForIncome <- approxfun(acs$income, acs$centile)
 percentiles <- read_excel("T11-0089.xls", skip = )
 percentiles <- data.frame(p = c(seq(.25, .75, by = .25), .95))
 percentiles <- mutate(percentiles, income = getIncomeForPercentile(p),
@@ -324,6 +349,23 @@ percentiles <- mutate(percentiles, income = getIncomeForPercentile(p),
                       xlabs = paste(scales::dollar(income), labs, sep = "\n"))
 percentiles$xlabs[percentiles$p == .5] <- 
   sub("50th Percentile", "Median", percentiles$xlabs[percentiles$p == .5])
+
+mutate(dataSum, percentile = getPercentileForIncome(income))
+
+#differences between plans / ribbon data
+datDiff <- inner_join(filter(datSum, set == "Bernie"), 
+                      filter(datSum, set == "Current"), 
+                      by = c("payer", "income")) %>%
+  rename(eTaxBern = eTax.x, eTaxCur = eTax.y) %>%
+  #   mutate(increase = eTaxBern - eTaxCur,
+  #          bottom = ifelse(increase <= 0, eTaxBern, eTaxCur),
+  #          dir = ifelse(increase > 0, "Increase", "Decrease")) %>%
+  # select(income, payer, top, bottom, dir)
+  mutate(increase = eTaxBern > eTaxCur,
+         iTop = ifelse(increase, eTaxBern, NA),
+         iBottom = ifelse(increase, eTaxCur, NA),
+         dTop = ifelse(!increase, eTaxCur, NA),
+         dBottom = ifelse(!increase, eTaxBern, NA))
 
 stop()
 ggplot(filter(datDiff, payer == "Individual"), aes(x = income)) +
