@@ -211,22 +211,23 @@ if(!useCorporateWelfare) {
 }
 
 tax <- function(brackets, income, deduction) {
-  sum(do.call(mapply, c(FUN = function(bottom, cap, rate, extra, deduct){
+  rowSums(do.call(mapply, c(FUN = function(bottom, cap, rate, extra, deduct){
     income <- income - deduction * deduct
-    if(income > cap) income <- cap
-    margin <- income - bottom
-    if(margin <= 0) return(0)
-    margin * rate + extra
-  }, brackets))) 
+    margin <- pmin(income, cap) - bottom
+    ifelse(margin <= 0, 0, margin * rate + extra)
+  }, brackets)))
 }
 
 
 taxes <- function(incomes, bracketsList, deductions = 0) {
   names(incomes) <- as.character(incomes)
-  ret <- mapply(function(inc, ded) {
-    sapply(bracketsList, tax, income = inc, deduction = ded)
-  }, inc = incomes, ded = deductions)
-  ret <- data.frame(t(ret), check.names = F)
+#   ret <- mapply(function(inc, ded) {
+#     sapply(bracketsList, tax, income = inc, deduction = ded)
+#   }, inc = incomes, ded = deductions)
+  ret <- sapply(bracketsList, tax, income = incomes, deduction = deductions)
+  ret <- data.frame(ret, check.names = F)
+  #ret <- data.frame(t(ret), check.names = F)
+  
   ret$income <- incomes
   ret$effectiveIncome <- incomes + 
     rowSums(ret[, na.omit(match(taxNamesEmp, names(ret)))], na.rm = T)
