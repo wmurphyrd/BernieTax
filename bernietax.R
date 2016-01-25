@@ -1,5 +1,5 @@
-library(dplyr); library(tidyr); library(acs); library(ggplot2); library(readxl)
-library(gridExtra)
+library(dplyr); library(tidyr); library(ggplot2); library(readxl)
+
 
 useCorporateWelfare <- F
 
@@ -339,16 +339,32 @@ datDiff <- inner_join(filter(datSum, set == "Bernie"),
          dTop = ifelse(!increase, eTaxCur, NA),
          dBottom = ifelse(!increase, eTaxBern, NA))
 
-png("bernieTax.png", 1024, 768)
+savings <- datDiff %>% filter(payer == "Individual") %>%
+  mutate(delta = (eTaxCur - eTaxBern) * income, 
+         mid = (eTaxCur + eTaxBern)/2)
+whichSavings <- c(which.min(abs(savings$percentile - .25)),
+                  which.min(abs(savings$percentile - .5)),
+                  which.min(abs(savings$percentile - .75)),
+                  which.max(savings$percentile))
+#whichSavings <- c(40000, 80000, 120000, 400000)
+savings <- savings[whichSavings,
+                   c("income", "delta", "mid", 
+                     "eTaxCur", "eTaxBern")]
+#savings$percentile <- getPercentileForIncome(whichSavings)
+savings$percentile <- c(.25, .5, .75, max(datDiff$percentile))
+savings$hjust <- c(-.08, .5, .5, -.05)
+savings$fill <- ifelse(savings$delta < 0, "Increase", "Savings")
+savings$delta <- abs(savings$delta)
+savings$lab <- paste0(savings$fill, ": ", scales::dollar(savings$delta))
+savings$mid[1] <- savings$mid[1] + .05
+savings$lab[4] <- paste("Top 5% Average", savings$lab[4], sep = "\n")
+
+
+png("bernieTax_color.png", width = 1024, height = 768)
 source("berniePlot.R", print.eval = T)
 dev.off()
 
-savings <- datDiff %>% filter(payer == "Individual") %>%
-  mutate(delta = (eTaxCur - eTaxBern) * income)
-print("Max savings:")
-savings[which.max(savings$delta), c("income", "delta")]
-print("Median family savings:")
-savings[which.min(abs(savings$percentile - .5)), c("income", "delta")]
+
 
 #data table export
 export <- rbind(cur, bern) %>% merge(datSum)
