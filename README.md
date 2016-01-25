@@ -14,11 +14,8 @@ calculations:
 * Paid Family Leave Tax
 * Average healthcare premium costs
 * Average healthcare out of pocket costs
-* Obamacare Premium Tax Credits
-* Employer contributions to Social Security and Medicare
-* Employer contributions to healthcare
 
-(Note: employer contributions are considered part of compensation and added to the income to create an "effective income" for rate calculations)
+(Note: employer contributions are not included in the current version)
 
 The impact of the following [proposals from Bernie Sanders](https://berniesanders.com/issues/how-bernie-pays-for-his-proposals/) is included:
 

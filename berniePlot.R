@@ -1,6 +1,6 @@
 shadowOffsetX <- .003
 shadowOffsetY <- -.003
-shadowSize <- 2.1
+shadowSize <- 2.5
 shadowColor <- "grey30"
 
 ggplot(filter(datDiff, payer == "Individual"), aes(x = percentile)) +
@@ -25,7 +25,7 @@ ggplot(filter(datDiff, payer == "Individual"), aes(x = percentile)) +
         text = element_text(size = 24),
         axis.title.y = element_text(margin = margin(0, 15, 0, 0)),
         axis.title.x = element_text(margin = margin(15, 0, 0, 0)),
-        plot.title = element_text(margin = margin(0, 0, 30, 0)),
+        plot.title = element_text(margin = margin(0, 0, 30, 0), size = 40),
         panel.grid.major.x = 
           element_line(colour = "grey80", size = 1, linetype = 2),
         panel.background = element_blank(),

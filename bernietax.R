@@ -101,25 +101,14 @@ familyLeaveBracketsBernie <- data.frame(
 #federal poverty level for family of 4
 #http://familiesusa.org/product/federal-poverty-guidelines
 fpl4 <- 24250
-#http://obamacarefacts.com/insurance-exchange/premium-tax-credits/
-#These brackets erroneously apply Obamacre premium credits to employer plans
-# healthPremBracketsCurrent <- data.frame(
-#   bottom = c(0, fpl4 * 1.33, fpl4 * 1.5, fpl4 * 2, fpl4 * 2.5, fpl4 * 4),
-#   cap = c(fpl4 * 1.33, fpl4 * 1.5, fpl4 * 2, fpl4 * 2.5, fpl4 * 4, Inf),
-#   #note, 250-400% of FPL has obamacare rate max of 9.66%, but this exceeds
-#   #national average, so the flat average is used instead
-#   rate = c(0, .047, .0641, .0818, 0, 0),
-#   extra = c(0, 0, 0, 0, 6408, 6408)
-# )
 
 # 35 hours per week at minmum wage is 54% of FPL (below medicaid threshold)
 # Therefore anyone earning above the medicaid threshold will should eligible for
-# employer sponsored coverage under Obamacare
+# employer sponsored coverage under Obamacare, so Obamacare exchange plans
+# and tax credits are not included
 healthPremBracketsCurrent <- data.frame(
   bottom = c(0, fpl4 * 1.33),
   cap = c(fpl4 * 1.33, Inf),
-  #note, 250-400% of FPL has obamacare rate max of 9.66%, but this exceeds
-  #national average, so the flat average is used instead
   rate = c(0, 0),
   extra = c(0, 6408), 
   deduct = 0
@@ -300,32 +289,6 @@ dat <- rbind(gather(rbind(cur, bern),
               expense, amount, -income, -effectiveIncome, -set, -payer, -agi),
              gather(rbind(curEmp, bernEmp),
                     expense, amount, -income, -effectiveIncome, -set, -payer, -agi))
-# dat <- rbind(gather(cur, expense, amount, -income, -effectiveIncome, -set),
-#       gather(bern, expense, amount,  -income, -effectiveIncome, -set))
-# dat <- mutate(dat, rate = amount / effectiveIncome,
-#               incomeT = income / 1000)
-
-# minimumWage35HoursBernie <- 15 * 35 * 52
-# 
-# dat <- filter(dat, 
-#               !(income < minimumWage35HoursBernie & set == "Bernie"))
-
-
-
-#incomelabs <- c(10, round(minimumWage35HoursBernie/1000), 54, 150, 400)
-
-# #png("bernietax.png", width = 960, height = 960)
-# ggplot(dat, aes(x = incomeT, y = rate, fill = expense)) + 
-#   geom_area(position = "stack") + facet_grid(set~.) +
-#   scale_x_log10(labels = scales::dollar, 
-#                 breaks = incomelabs) +
-#   theme(text = element_text(size = 24)) +
-#   guides(fill = guide_legend("")) +
-#   labs(x = "Taxable Income (thousands)", 
-#        y = "Effective Tax Rate") +
-#   scale_y_continuous(labels = scales::percent,
-#                      breaks = seq(0, .6, by = .1))
-# #dev.off()
 
 #total effective tax rates
 datSum <- dat %>% group_by(payer, set, income, effectiveIncome, agi) %>% 
@@ -342,6 +305,8 @@ acs <- acs %>% rename(income = `Mean \n Income (dollars)`) %>%
          payer = "Population")
 getIncomeForPercentile <- approxfun(acs$centile, acs$income)
 getPercentileForIncome <- approxfun(acs$income, acs$centile)
+# glm modeling allows for smoother interpolation, but becomes inaccurate
+# at extremes. Linear interpolation used instead
 # mod <- glm(centile ~ income, acs, family = "binomial")
 # getPercentileForIncome <- function(x) {
 #   predict(mod, data.frame(income = x), type = "response")
@@ -368,10 +333,6 @@ datDiff <- inner_join(filter(datSum, set == "Bernie"),
                       filter(datSum, set == "Current"), 
                       by = c("payer", "income", "percentile")) %>%
   rename(eTaxBern = eTax.x, eTaxCur = eTax.y) %>%
-  #   mutate(increase = eTaxBern - eTaxCur,
-  #          bottom = ifelse(increase <= 0, eTaxBern, eTaxCur),
-  #          dir = ifelse(increase > 0, "Increase", "Decrease")) %>%
-  # select(income, payer, top, bottom, dir)
   mutate(increase = eTaxBern > eTaxCur,
          iTop = ifelse(increase, eTaxBern, NA),
          iBottom = ifelse(increase, eTaxCur, NA),
@@ -381,50 +342,10 @@ datDiff <- inner_join(filter(datSum, set == "Bernie"),
 png("bernieTax.png", 1024, 768)
 source("berniePlot.R", print.eval = T)
 dev.off()
-# stop()
-# ggplot(filter(datDiff, payer == "Individual"), aes(x = income)) +
-#   geom_segment(aes(xend = income, yend = 0.51, y = .2), percentiles,
-#                linetype = 2, color = "grey40") +
-#   geom_ribbon(aes(ymax = iTop, ymin = iBottom, fill = "Increase")) +
-#   geom_ribbon(aes(ymax = dTop, ymin = dBottom, fill = "Decrease")) +
-# #   geom_line(aes(y = eTax - .0025, x = income * 1.03, group = set), datSum, 
-# #             size = 2, color = "grey20") + 
-#   geom_line(aes(y = eTaxBern, color = "Bernie"), size = 1.9) +
-#   geom_line(aes(y = eTaxCur, color = "Current"), size = 1.9) +
-#   scale_x_log10(breaks = percentiles$income, labels = percentiles$xlabs) +
-#   scale_y_continuous(labels = scales::percent) +
-#   scale_color_manual("Tax Plan", values = c("#287CBF", "#EB514F")) +
-#   scale_fill_manual("Change under Bernie's Plans", 
-#                     values = c("#7db6e3", "#f18b89")) +
-#   theme_classic() +
-#   theme(axis.line = element_blank(), leged.position = "bottom") 
-# 
-#   #stat_smooth(aes(y = centile), acs, se = F, method = loess) +
-#   #coord_cartesian(xlim = c(min(incomes), max(incomes)))
-# 
-# 
-# # distrPlot <- ggplot(acs, aes(x = Dollars, y = Number)) +
-# #   stat_smooth(se = F, method = loess) +
-# #   coord_cartesian(xlim = c(min(incomes), max(incomes))) +
-# #   theme_classic() +
-# #   theme(axis.line = element_blank())
-# # 
-# # lay <- rbind(1, 1, 2)
-# # grid.arrange(taxPlots, distrPlot, layout_matrix = lay)
-# 
-# ggplot(datDiff, aes(x = income)) +
-#   geom_ribbon(aes(ymax = iTop, ymin = iBottom, fill = "Increase")) +
-#   geom_ribbon(aes(ymax = dTop, ymin = dBottom, fill = "Decrease")) +
-#   geom_line(aes(y = eTax - .0025, x = income * 1.03, group = set), datSum, 
-#             size = 2, color = "grey20") + 
-#   geom_line(aes(y = eTax, color = set), datSum, size = 1.9) +
-#   facet_grid(payer ~ ., scales = "free") +
-#   scale_x_continuous(labels = scales::dollar) +
-#   scale_y_continuous(labels = scales::percent) +
-#   scale_color_manual("Tax Plan", values = c("#287CBF", "#EB514F")) +
-#   scale_fill_manual("Change under Bernie's Plans", 
-#                     values = c("#7db6e3", "#f18b89")) +
-#   theme_classic() +
-#   theme(axis.line = element_blank()) +
-#   stat_smooth(aes(y = centile), acs, se = F, method = loess) +
-#   coord_cartesian(xlim = c(min(incomes), max(incomes)))
+
+savings <- datDiff %>% filter(payer == "Individual") %>%
+  mutate(delta = (eTaxCur - eTaxBern) * income)
+print("Max savings:")
+savings[which.max(savings$delta), c("income", "delta")]
+print("Median family savings:")
+savings[which.min(abs(savings$percentile - .5)), c("income", "delta")]
