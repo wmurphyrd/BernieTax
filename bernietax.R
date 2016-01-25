@@ -349,3 +349,16 @@ print("Max savings:")
 savings[which.max(savings$delta), c("income", "delta")]
 print("Median family savings:")
 savings[which.min(abs(savings$percentile - .5)), c("income", "delta")]
+
+#data table export
+export <- rbind(cur, bern) %>% merge(datSum)
+export <- rename(export, `Total Tax` = tTax, `Effective Tax Rate` = eTax,
+                 `Income Percentile` = percentile, Income = income) %>%
+  select(-agi, -effectiveIncome, -payer)
+export <- merge(filter(export, set == "Bernie") %>% select(-set),
+      filter(export, set == "Current") %>% select(-set),
+      by = c("Income", "Income Percentile"),
+      suffixes = c(" with Bernie", " at Present")) %>%
+  arrange(Income)
+
+write.csv(export, "BernieTaxExport.csv", row.names = F)
