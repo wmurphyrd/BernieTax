@@ -236,7 +236,7 @@ taxes <- function(incomes, bracketsList, deductions = 0) {
 }
 
 
-incomes <- seq(20000, 450000, by = 2000)
+incomes <- seq(8000, 402000, by = 2000)
 
 ##Deductions and credits
 
@@ -342,6 +342,10 @@ acs <- acs %>% rename(income = `Mean \n Income (dollars)`) %>%
          payer = "Population")
 getIncomeForPercentile <- approxfun(acs$centile, acs$income)
 getPercentileForIncome <- approxfun(acs$income, acs$centile)
+# mod <- glm(centile ~ income, acs, family = "binomial")
+# getPercentileForIncome <- function(x) {
+#   predict(mod, data.frame(income = x), type = "response")
+# }
 percentiles <- read_excel("T11-0089.xls", skip = )
 percentiles <- data.frame(p = c(seq(.25, .75, by = .25), .95))
 percentiles <- mutate(percentiles, income = getIncomeForPercentile(p),
@@ -350,12 +354,19 @@ percentiles <- mutate(percentiles, income = getIncomeForPercentile(p),
 percentiles$xlabs[percentiles$p == .5] <- 
   sub("50th Percentile", "Median", percentiles$xlabs[percentiles$p == .5])
 
-mutate(dataSum, percentile = getPercentileForIncome(income))
+centileLabeler <- function(breaks) {
+  pct <- paste0(round(breaks*100), "th Percentile")
+  pct[breaks == .5] <- "Median"
+  incs <- scales::dollar(getIncomeForPercentile(breaks))
+  paste(incs, pct, sep = "\n")
+}
+
+datSum <- mutate(datSum, percentile = getPercentileForIncome(income))
 
 #differences between plans / ribbon data
 datDiff <- inner_join(filter(datSum, set == "Bernie"), 
                       filter(datSum, set == "Current"), 
-                      by = c("payer", "income")) %>%
+                      by = c("payer", "income", "percentile")) %>%
   rename(eTaxBern = eTax.x, eTaxCur = eTax.y) %>%
   #   mutate(increase = eTaxBern - eTaxCur,
   #          bottom = ifelse(increase <= 0, eTaxBern, eTaxCur),
@@ -367,50 +378,53 @@ datDiff <- inner_join(filter(datSum, set == "Bernie"),
          dTop = ifelse(!increase, eTaxCur, NA),
          dBottom = ifelse(!increase, eTaxBern, NA))
 
-stop()
-ggplot(filter(datDiff, payer == "Individual"), aes(x = income)) +
-  geom_segment(aes(xend = income, yend = 0.51, y = .2), percentiles,
-               linetype = 2, color = "grey40") +
-  geom_ribbon(aes(ymax = iTop, ymin = iBottom, fill = "Increase")) +
-  geom_ribbon(aes(ymax = dTop, ymin = dBottom, fill = "Decrease")) +
+png("bernieTax.png", 1024, 768)
+source("berniePlot.R", print.eval = T)
+dev.off()
+# stop()
+# ggplot(filter(datDiff, payer == "Individual"), aes(x = income)) +
+#   geom_segment(aes(xend = income, yend = 0.51, y = .2), percentiles,
+#                linetype = 2, color = "grey40") +
+#   geom_ribbon(aes(ymax = iTop, ymin = iBottom, fill = "Increase")) +
+#   geom_ribbon(aes(ymax = dTop, ymin = dBottom, fill = "Decrease")) +
+# #   geom_line(aes(y = eTax - .0025, x = income * 1.03, group = set), datSum, 
+# #             size = 2, color = "grey20") + 
+#   geom_line(aes(y = eTaxBern, color = "Bernie"), size = 1.9) +
+#   geom_line(aes(y = eTaxCur, color = "Current"), size = 1.9) +
+#   scale_x_log10(breaks = percentiles$income, labels = percentiles$xlabs) +
+#   scale_y_continuous(labels = scales::percent) +
+#   scale_color_manual("Tax Plan", values = c("#287CBF", "#EB514F")) +
+#   scale_fill_manual("Change under Bernie's Plans", 
+#                     values = c("#7db6e3", "#f18b89")) +
+#   theme_classic() +
+#   theme(axis.line = element_blank(), leged.position = "bottom") 
+# 
+#   #stat_smooth(aes(y = centile), acs, se = F, method = loess) +
+#   #coord_cartesian(xlim = c(min(incomes), max(incomes)))
+# 
+# 
+# # distrPlot <- ggplot(acs, aes(x = Dollars, y = Number)) +
+# #   stat_smooth(se = F, method = loess) +
+# #   coord_cartesian(xlim = c(min(incomes), max(incomes))) +
+# #   theme_classic() +
+# #   theme(axis.line = element_blank())
+# # 
+# # lay <- rbind(1, 1, 2)
+# # grid.arrange(taxPlots, distrPlot, layout_matrix = lay)
+# 
+# ggplot(datDiff, aes(x = income)) +
+#   geom_ribbon(aes(ymax = iTop, ymin = iBottom, fill = "Increase")) +
+#   geom_ribbon(aes(ymax = dTop, ymin = dBottom, fill = "Decrease")) +
 #   geom_line(aes(y = eTax - .0025, x = income * 1.03, group = set), datSum, 
 #             size = 2, color = "grey20") + 
-  geom_line(aes(y = eTaxBern, color = "Bernie"), size = 1.9) +
-  geom_line(aes(y = eTaxCur, color = "Current"), size = 1.9) +
-  scale_x_log10(breaks = percentiles$income, labels = percentiles$xlabs) +
-  scale_y_continuous(labels = scales::percent) +
-  scale_color_manual("Tax Plan", values = c("#287CBF", "#EB514F")) +
-  scale_fill_manual("Change under Bernie's Plans", 
-                    values = c("#7db6e3", "#f18b89")) +
-  theme_classic() +
-  theme(axis.line = element_blank(), leged.position = "bottom") 
-
-  #stat_smooth(aes(y = centile), acs, se = F, method = loess) +
-  #coord_cartesian(xlim = c(min(incomes), max(incomes)))
-
-
-# distrPlot <- ggplot(acs, aes(x = Dollars, y = Number)) +
-#   stat_smooth(se = F, method = loess) +
-#   coord_cartesian(xlim = c(min(incomes), max(incomes))) +
+#   geom_line(aes(y = eTax, color = set), datSum, size = 1.9) +
+#   facet_grid(payer ~ ., scales = "free") +
+#   scale_x_continuous(labels = scales::dollar) +
+#   scale_y_continuous(labels = scales::percent) +
+#   scale_color_manual("Tax Plan", values = c("#287CBF", "#EB514F")) +
+#   scale_fill_manual("Change under Bernie's Plans", 
+#                     values = c("#7db6e3", "#f18b89")) +
 #   theme_classic() +
-#   theme(axis.line = element_blank())
-# 
-# lay <- rbind(1, 1, 2)
-# grid.arrange(taxPlots, distrPlot, layout_matrix = lay)
-
-ggplot(datDiff, aes(x = income)) +
-  geom_ribbon(aes(ymax = iTop, ymin = iBottom, fill = "Increase")) +
-  geom_ribbon(aes(ymax = dTop, ymin = dBottom, fill = "Decrease")) +
-  geom_line(aes(y = eTax - .0025, x = income * 1.03, group = set), datSum, 
-            size = 2, color = "grey20") + 
-  geom_line(aes(y = eTax, color = set), datSum, size = 1.9) +
-  facet_grid(payer ~ ., scales = "free") +
-  scale_x_continuous(labels = scales::dollar) +
-  scale_y_continuous(labels = scales::percent) +
-  scale_color_manual("Tax Plan", values = c("#287CBF", "#EB514F")) +
-  scale_fill_manual("Change under Bernie's Plans", 
-                    values = c("#7db6e3", "#f18b89")) +
-  theme_classic() +
-  theme(axis.line = element_blank()) +
-  stat_smooth(aes(y = centile), acs, se = F, method = loess) +
-  coord_cartesian(xlim = c(min(incomes), max(incomes)))
+#   theme(axis.line = element_blank()) +
+#   stat_smooth(aes(y = centile), acs, se = F, method = loess) +
+#   coord_cartesian(xlim = c(min(incomes), max(incomes)))
