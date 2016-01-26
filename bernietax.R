@@ -310,8 +310,7 @@ getPercentileForIncome <- approxfun(acs$income, acs$centile)
 # mod <- glm(centile ~ income, acs, family = "binomial")
 # getPercentileForIncome <- function(x) {
 #   predict(mod, data.frame(income = x), type = "response")
-# }
-percentiles <- read_excel("T11-0089.xls", skip = )
+
 percentiles <- data.frame(p = c(seq(.25, .75, by = .25), .95))
 percentiles <- mutate(percentiles, income = getIncomeForPercentile(p),
                       labs = paste0(as.character(p * 100), "th Percentile"),
