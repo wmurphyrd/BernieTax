@@ -14,7 +14,7 @@ ggplot(filter(datDiff, payer == "Individual"), aes(x = income)) +
   scale_fill_manual("Change under Bernie's Plans", 
                     values = c("#7db6e3", "#f18b89")) +
   theme_classic() +
-  theme(axis.line = element_blank(), leged.position = "bottom") 
+  theme(axis.line = element_blank(), legend.position = "bottom") 
 
   #stat_smooth(aes(y = centile), acs, se = F, method = loess) +
   #coord_cartesian(xlim = c(min(incomes), max(incomes)))
