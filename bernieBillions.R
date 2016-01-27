@@ -16,11 +16,11 @@ ggplot(filter(datDiff, payer == "Individual"), aes(x = income)) +
   geom_ribbon(aes(ymax = dTop, ymin = dBottom, fill = "Savings")) +
   geom_line(aes(y = eTaxBern, color = "Bernie"), size = 2.75) +
   geom_line(aes(y = eTaxCur, color = "Current"), size = 2.75) +
-  scale_x_log10(breaks = c(60000, 250000, 1000000, 5000000),
+  scale_x_log10(breaks = c(60000, 250000, 1000000, 10000000, 50000000),
                 labels = scales::dollar) +
 #   scale_x_continuous(breaks = c(.05, .25, .5, .75, .95), 
 #                      labels = centileLabeler) +
-  scale_y_continuous(labels = scales::percent) +
+  scale_y_continuous(labels = scales::percent, breaks = seq(-1,1, by = .1)) +
   scale_color_manual("Tax Plan", values = trendColors) +
   scale_fill_manual("Change under Bernie's Plans", 
                     limits = c("Savings", "Increase"),
@@ -32,15 +32,15 @@ ggplot(filter(datDiff, payer == "Individual"), aes(x = income)) +
         text = element_text(size = 24),
         axis.title.y = element_text(margin = margin(0, 15, 0, 0)),
         axis.title.x = element_text(margin = margin(15, 0, 0, 0)),
-        plot.title = element_text(margin = margin(0, 0, 30, 0), size = 40),
+        plot.title = element_text(margin = margin(0, 0, 30, 0), size = 36),
         panel.grid.major.x = 
           element_line(colour = "grey80", size = 1, linetype = 2),
         panel.background = element_blank(),
         axis.ticks.x = element_blank()) +
   labs(y = "Tax and Healthcare Burden (% of income)", 
        x = "Income for a Family of 4 (USD)", 
-       title = "Just How Much Would Bernie Sanders Tax Me?") #+
-#   coord_cartesian(xlim = c(0, 1.15)) +
+       title = "Just How Much Would Bernie Sanders Tax Billionaires?") # +
+   #coord_cartesian(ylim = c(10000, 11000000)) 
 #   annotate("text", x = .21, y = .33, 
 #            label = "Taxes + Healthcare Expense Now",
 #            angle = 0, hjust = 0, color = trendColors[2], size = 12,
