@@ -356,7 +356,7 @@ savings$fill <- ifelse(savings$delta < 0, "Increase", "Savings")
 savings$delta <- abs(savings$delta)
 savings$lab <- paste0(savings$fill, ": ", scales::dollar(savings$delta))
 savings$mid[1] <- savings$mid[1] + .05
-savings$lab[4] <- paste("Top 5% Average", savings$lab[4], sep = "\n")
+savings$lab[4] <- paste("Top 5% Average", "Income ($400K)", savings$lab[4], sep = "\n")
 
 
 png("bernieTax_color.png", width = 1024, height = 768)
