@@ -2,6 +2,9 @@ library(dplyr); library(tidyr); library(ggplot2); library(readxl)
 
 
 useCorporateWelfare <- F
+filingStatus <- c("Married/Joint", "Married/Seperate", "Head of Household", 
+                  "Single")
+nKids <- 2
 
 nilBracket <- data.frame(
   bottom = 0, cap = Inf, rate = 0, extra = 0, deduct = 0
@@ -130,10 +133,13 @@ healthPocketBracketsCurrent <- data.frame(
   deduct = 0
 )
 
+#https://berniesanders.com/issues/medicare-for-all-2/
 healthPremBracketsBernie <- nilBracket
 
+#https://berniesanders.com/issues/medicare-for-all-2/
 healthPocketBracketsBernie <- nilBracket
 
+#http://www.milliman.com/uploadedFiles/insight/Periodicals/mmi/2015-MMI.pdf 
 healthEmpBracketsCurrent <- data.frame(
   bottom = c(0, fpl4*1.33),
   cap = c(fpl4*1.33, Inf),
@@ -142,16 +148,21 @@ healthEmpBracketsCurrent <- data.frame(
   deduct = 0
 )
 
+# https://berniesanders.com/issues/medicare-for-all-2/
 healthEmpBracketsBernie <- nilBracket
 
+# https://www.irs.gov/publications/p15/ar02.html#en_US_2016_publink1000202402
 payrollTaxBracketsCurrent <- data.frame(
   bottom = 0, cap = Inf, rate = .0765, extra = 0, deduct = 0
 )
 
+# https://berniesanders.com/issues/medicare-for-all-2/
 payrollTaxBracketsBernie <- data.frame(
-  bottom = 0, cap = Inf, rate = .1385, extra = 0, deduct = 0
+  bottom = 0, cap = Inf, rate = .0765 + .062, extra = 0, deduct = 0
 )
 
+# not current used - represents the what employers save by paying so little that
+# their employees qualify for medicare
 corpWelfareGapCurrent <- data.frame(
  bottom = c(0, fpl4 * 1.33),
  cap = c(fpl4 * 1.33, Inf),
@@ -210,13 +221,8 @@ tax <- function(brackets, income, deduction) {
 
 taxes <- function(incomes, bracketsList, deductions = 0) {
   names(incomes) <- as.character(incomes)
-#   ret <- mapply(function(inc, ded) {
-#     sapply(bracketsList, tax, income = inc, deduction = ded)
-#   }, inc = incomes, ded = deductions)
   ret <- sapply(bracketsList, tax, income = incomes, deduction = deductions)
   ret <- data.frame(ret, check.names = F)
-  #ret <- data.frame(t(ret), check.names = F)
-  
   ret$income <- incomes
   ret$effectiveIncome <- incomes + 
     rowSums(ret[, na.omit(match(taxNamesEmp, names(ret)))], na.rm = T)
@@ -226,6 +232,8 @@ taxes <- function(incomes, bracketsList, deductions = 0) {
 
 
 incomes <- seq(8000, 402000, by = 2000)
+#for billionaires graph
+#incomes <- seq(10000, 50000000, by = 10000)
 
 ##Deductions and credits
 
@@ -236,7 +244,7 @@ exemptions <- 4 * 4000
 exPhaseOut <- pmin(ceiling(pmax(0, incomes - 309900) / 2500) * .02, 1)
 exemptions <- exemptions - exemptions * exPhaseOut
 totalDeduction <- standardDeduction + exemptions
-#incomes <- seq(20000, 5000000, by = 10000)
+
 
 ##Earned income tax credit
 #https://www.irs.gov/Credits-&-Deductions/Individuals/Earned-Income-Tax-Credit/EITC-Income-Limits-Maximum-Credit-Amounts
@@ -310,6 +318,7 @@ getPercentileForIncome <- approxfun(acs$income, acs$centile)
 # mod <- glm(centile ~ income, acs, family = "binomial")
 # getPercentileForIncome <- function(x) {
 #   predict(mod, data.frame(income = x), type = "response")
+# }
 
 percentiles <- data.frame(p = c(seq(.25, .75, by = .25), .95))
 percentiles <- mutate(percentiles, income = getIncomeForPercentile(p),
