@@ -135,16 +135,28 @@ getBrackets <- function(filingStatus = c("Married/Joint", "Married/Separate",
   fpl <- switch(pmin(ifelse(grepl("Married", filingStatus), 2, 1) + nKids, 8),
                 11770, 15930, 20090, 24250, 28410, 32570, 36730, 40890)
   
-  # 35 hours per week at minmum wage is 54% of FPL (below medicaid threshold)
-  # Therefore anyone earning above the medicaid threshold will should eligible for
+  # Anyone earning above the medicaid threshold should eligible for
   # employer sponsored coverage under Obamacare, so Obamacare exchange plans
-  # and tax credits are not included
-  healthPremBracketsCurrent <- data.frame(
-    bottom = c(0, fpl * 1.33),
-    cap = c(fpl * 1.33, Inf),
-    rate = c(0, 0),
-    extra = c(0, 6408), 
-    deduct = 0
+  # and tax credits are not included.
+  # Using Milliman index for families because estimate of actual out-of-pocket 
+  # available. KFF's estimate for family premiums is ~$1,000 less
+  # http://www.milliman.com/uploadedFiles/insight/Periodicals/mmi/2015-MMI.pdf 
+  # Using KFF for singles because milliman doesn't have info on singles 
+  # http://kff.org/health-costs/report/2015-employer-health-benefits-survey/
+  healthPremBracketsCurrent <- switch(
+    filingStatus, 
+    "Married/Joint" = data.frame(
+      bottom = c(0, fpl * 1.33),
+      cap = c(fpl * 1.33, Inf),
+      rate = c(0, 0),
+      extra = c(0, 6408), 
+      deduct = 0),
+    data.frame(
+      bottom = c(0, fpl * 1.33),
+      cap = c(fpl * 1.33, Inf),
+      rate = c(0, 0),
+      extra = c(0, 1071), 
+      deduct = 0)
   )
   
   
@@ -155,12 +167,22 @@ getBrackets <- function(filingStatus = c("Married/Joint", "Married/Separate",
   #http://www.milliman.com/uploadedFiles/insight/Periodicals/mmi/2015-MMI.pdf 
   #page 7
   #http://obamacarefacts.com/obamacares-medicaid-expansion/
-  healthPocketBracketsCurrent <- data.frame(
+  # No good out-of-poclet estimate for singles, using avg deductible from KFF
+  # http://kff.org/health-costs/report/2015-employer-health-benefits-survey/
+  healthPocketBracketsCurrent <- switch(
+    filingStatus, 
+    "Married/Joint" = data.frame(
     bottom = c(0, fpl * 1.33),
     cap = c(fpl * 1.33, Inf),
     rate = c(.024, 0),
-    extra = c(0, 4065 - .024 * fpl * 1.33), 
-    deduct = 0
+    extra = c(0, max(4065 - .024 * fpl * 1.33, 0)), 
+    deduct = 0),
+    data.frame(
+      bottom = c(0, fpl * 1.33),
+      cap = c(fpl * 1.33, Inf),
+      rate = c(.024, 0),
+      extra = c(0, max(1318 - .024 * fpl * 1.33, 0)), 
+      deduct = 0)
   )
   
   #https://berniesanders.com/issues/medicare-for-all-2/
@@ -169,13 +191,26 @@ getBrackets <- function(filingStatus = c("Married/Joint", "Married/Separate",
   #https://berniesanders.com/issues/medicare-for-all-2/
   healthPocketBracketsBernie <- nilBracket
   
-  #http://www.milliman.com/uploadedFiles/insight/Periodicals/mmi/2015-MMI.pdf 
-  healthEmpBracketsCurrent <- data.frame(
-    bottom = c(0, fpl * 1.33),
-    cap = c(fpl * 1.33, Inf),
-    rate = 0,
-    extra = c(0, 14198), 
-    deduct = 0
+  # Using Milliman index for families because estimate of actual out-of-pocket 
+  # available. Differences between KFF and milliman for employer contribution
+  # are minimal 
+  # http://www.milliman.com/uploadedFiles/insight/Periodicals/mmi/2015-MMI.pdf 
+  # Using KFF for singles because milliman doesn't have info on singles 
+  # http://kff.org/health-costs/report/2015-employer-health-benefits-survey/
+  healthEmpBracketsCurrent <- switch(
+    filingStatus,
+    "Married/Joint" = data.frame(
+      bottom = c(0, fpl * 1.33),
+      cap = c(fpl * 1.33, Inf),
+      rate = 0,
+      extra = c(0, 14198), 
+      deduct = 0),
+    data.frame(
+      bottom = c(0, fpl * 1.33),
+      cap = c(fpl * 1.33, Inf),
+      rate = 0,
+      extra = c(0, 5179), 
+      deduct = 0)
   )
   
   # https://berniesanders.com/issues/medicare-for-all-2/
@@ -187,6 +222,7 @@ getBrackets <- function(filingStatus = c("Married/Joint", "Married/Separate",
   )
   
   # https://berniesanders.com/issues/medicare-for-all-2/
+  # https://www.irs.gov/publications/p15/ar02.html
   payrollTaxBracketsBernie <- data.frame(
     bottom = 0, cap = Inf, rate = .0765 + .062, extra = 0, deduct = 0
   )

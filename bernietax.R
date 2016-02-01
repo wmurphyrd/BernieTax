@@ -5,7 +5,9 @@ source("bernietaxFunctions.R")
 useCorporateWelfare <- F
 filingStatus <- "Single"
 nKids <- 0
-sex <- "M"
+#filingStatus <- "Married/Joint"
+#nKids <- 2
+sex <- "F"
 
 taxNamesInd <- c("Income Tax", "Social Security Tax", "Medicare Tax",
                  "Medicare-for-all Tax", "Family Leave Tax", 
@@ -14,6 +16,25 @@ taxNamesEmp <- c("Employer Healthcare\nContribution",
                  "Employer Payroll Tax", "Corporate Welfare")
 
 incomes <- seq(8000, 402000, by = 2000)
+
+acs <- getCensusIncomes(filingStatus, sex)
+getIncomeForPercentile <- approxfun(acs$centile, acs$income)
+getPercentileForIncome <- approxfun(acs$income, acs$centile)
+# glm modeling allows for smoother interpolation, but becomes inaccurate
+# at extremes. Linear interpolation used instead
+# mod <- glm(centile ~ income, acs, family = "binomial")
+# getPercentileForIncome <- function(x) {
+#   predict(mod, data.frame(income = x), type = "response")
+# }
+
+centileLabeler <- function(breaks) {
+  pct <- paste0(round(breaks*100), "th Percentile")
+  pct[breaks == .5] <- "Median"
+  incs <- scales::dollar(getIncomeForPercentile(breaks))
+  paste(incs, pct, sep = "\n")
+}
+
+incomes <- c(incomes, getIncomeForPercentile(c(.25, .5, .75)))
 #alternate for billionaires graph
 #incomes <- seq(10000, 50000000, by = 10000)
 
@@ -59,29 +80,16 @@ datSum <- dat %>% group_by(payer, set, income, effectiveIncome, agi) %>%
 # acs <- acs %>% rename(income = `Mean \n Income (dollars)`) %>% 
 #   mutate(prop = Number / sum(Number), centile = cumsum(prop),
 #          payer = "Population")
-acs <- getCensusIncomes(filingStatus, sex)
-getIncomeForPercentile <- approxfun(acs$centile, acs$income)
-getPercentileForIncome <- approxfun(acs$income, acs$centile)
-# glm modeling allows for smoother interpolation, but becomes inaccurate
-# at extremes. Linear interpolation used instead
-# mod <- glm(centile ~ income, acs, family = "binomial")
-# getPercentileForIncome <- function(x) {
-#   predict(mod, data.frame(income = x), type = "response")
-# }
 
-percentiles <- data.frame(p = c(seq(.25, .75, by = .25), .95))
-percentiles <- mutate(percentiles, income = getIncomeForPercentile(p),
-                      labs = paste0(as.character(p * 100), "th Percentile"),
-                      xlabs = paste(scales::dollar(income), labs, sep = "\n"))
-percentiles$xlabs[percentiles$p == .5] <- 
-  sub("50th Percentile", "Median", percentiles$xlabs[percentiles$p == .5])
 
-centileLabeler <- function(breaks) {
-  pct <- paste0(round(breaks*100), "th Percentile")
-  pct[breaks == .5] <- "Median"
-  incs <- scales::dollar(getIncomeForPercentile(breaks))
-  paste(incs, pct, sep = "\n")
-}
+# percentiles <- data.frame(p = c(seq(.25, .75, by = .25), .95))
+# percentiles <- mutate(percentiles, income = getIncomeForPercentile(p),
+#                       labs = paste0(as.character(p * 100), "th Percentile"),
+#                       xlabs = paste(scales::dollar(income), labs, sep = "\n"))
+# percentiles$xlabs[percentiles$p == .5] <- 
+#   sub("50th Percentile", "Median", percentiles$xlabs[percentiles$p == .5])
+
+
 
 datSum <- mutate(datSum, percentile = getPercentileForIncome(income))
 
@@ -96,29 +104,16 @@ datDiff <- inner_join(filter(datSum, set == "Bernie"),
          dTop = ifelse(!increase, eTaxCur, NA),
          dBottom = ifelse(!increase, eTaxBern, NA))
 
-savings <- datDiff %>% filter(payer == "Individual") %>%
-  mutate(delta = (eTaxCur - eTaxBern) * income, 
-         mid = (eTaxCur + eTaxBern)/2)
-whichSavings <- c(which.min(abs(savings$percentile - .25)),
-                  which.min(abs(savings$percentile - .5)),
-                  which.min(abs(savings$percentile - .75)),
-                  which.max(savings$percentile))
-#whichSavings <- c(40000, 80000, 120000, 400000)
-savings <- savings[whichSavings,
-                   c("income", "delta", "mid", 
-                     "eTaxCur", "eTaxBern")]
-#savings$percentile <- getPercentileForIncome(whichSavings)
-savings$percentile <- c(.25, .5, .75, max(datDiff$percentile))
-savings$hjust <- c(-.08, .5, .5, -.05)
-savings$fill <- ifelse(savings$delta < 0, "Increase", "Savings")
-savings$delta <- abs(savings$delta)
-savings$lab <- paste0(savings$fill, ": ", scales::dollar(savings$delta))
-savings$mid[1] <- savings$mid[1] + .05
-savings$lab[4] <- paste("Top 5% Average", "Income ($400K)", savings$lab[4], sep = "\n")
+
+
 
 
 png("bernieTax_color.png", width = 1024, height = 768)
-source("berniePlot.R", print.eval = T)
+if(filingStatus == "Married/Joint") {
+  source("berniePlot.R", print.eval = T)
+} else {
+  source("berniePlotSingle.R", print.eval = T)
+}
 dev.off()
 
 
