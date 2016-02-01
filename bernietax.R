@@ -2,7 +2,7 @@ library(dplyr); library(tidyr); library(ggplot2); library(readxl)
 source("bernieTaxBrackets.R")
 
 useCorporateWelfare <- F
-filingStatus <- c("Married/Joint")
+filingStatus <- "Married/Joint"
 nKids <- 2
 
 taxNamesInd <- c("Income Tax", "Social Security Tax", "Medicare Tax",
@@ -37,44 +37,83 @@ incomes <- seq(8000, 402000, by = 2000)
 #incomes <- seq(10000, 50000000, by = 10000)
 
 ##Deductions and credits
-getDeduction <- function(filingStatus = c("Married/Joint", "Married/Seperate",
+getDeduction <- function(incomes, 
+                         filingStatus = c("Married/Joint", "Married/Seperate",
                                           "Head of Household", "Single"),
                          nkids) {
   filingStatus <- match.arg(filingStatus)
-  
+  # https://www.irs.com/articles/2015-federal-tax-rates-personal-exemptions-and-standard-deductions
+  standardDeduction <- switch(filingStatus,
+                              "Married/Joint" = 12600,
+                              "Married/Seperate" = 6300,
+                              "Head of Household" = 9250,
+                              "Single" = 6300)
+  # https://www.irs.gov/publications/p17/ch03.html
+  exemptions <- (ifelse(grepl("Married", filingStatus), 2, 1) + nKids) * 4000
+  exPhaseOutStart <- switch(filingStatus,
+                            "Married/Joint" = 309900,
+                            "Married/Seperate" = 154950,
+                            "Head of Household" = 284050,
+                            "Single" = 258250)
+  exPhaseOut <- 
+    pmin(ceiling(pmax(0, incomes - exPhaseOutStart) / 2500) * .02, 1)
+  standardDeduction + exemptions * (1 - exPhaseOut)
+
 }
 #https://www.irs.com/articles/2015-federal-tax-rates-personal-exemptions-and-standard-deductions
-standardDeduction <- 12600
+#standardDeduction <- 12600
 #https://www.irs.gov/publications/p17/ch03.html
-exemptions <- 4 * 4000
-exPhaseOut <- pmin(ceiling(pmax(0, incomes - 309900) / 2500) * .02, 1)
-exemptions <- exemptions - exemptions * exPhaseOut
-totalDeduction <- standardDeduction + exemptions
+#exemptions <- 4 * 4000
+#exPhaseOut <- pmin(ceiling(pmax(0, incomes - 309900) / 2500) * .02, 1)
+#exemptions <- exemptions - exemptions * exPhaseOut
+#totalDeduction <- standardDeduction + exemptions
+totalDeduction <- getDeduction(incomes, filingStatus, nKids)
 
 
 ##Earned income tax credit
 #https://www.irs.gov/Credits-&-Deductions/Individuals/Earned-Income-Tax-Credit/EITC-Income-Limits-Maximum-Credit-Amounts
 #https://www.law.cornell.edu/uscode/text/26/32
-eitc <- function(inc, agi) {
-  max <- 5548
-  fullPhaseout <- 44651
+eitc <- function(inc, agi, 
+                 filingStatus = c("Married/Joint", "Married/Separate",
+                                  "Head of Household", "Single"), 
+                 nKids) {
+  filingStatus <- match.arg(filingStatus)
+  kidSwitch <- pmin(nKids, 3) + 1
+  max <- switch(kidSwitch, 503, 3359, 5548, 6242)
+  if(filingStatus == "Married/Joint") {
+    fullPhaseout <- switch(kidSwitch, 20330, 44651, 49974, 53267)
+  } else {
+    fullPhaseout <- switch(kidSwitch, 14820, 39131, 44454, 47747)
+  }
+  #fullPhaseout <- 44651
   pPhaseout <- .2106
   pPhasein <- .4
   #calulcate phaseout threshold based on where credit reduces to $0
   startPhaseout <- fullPhaseout - max / pPhaseout
-  # credit = 40% of income up to max of 5548 minus 21.05% percent of agi
-  # over phaseout threshold down to a minimum credit of 0$ at agi of $44,651
+  # credit = 40% of income up to max minus 21.05% percent of agi over phaseout
+  # threshold down to a minimum credit of $0
   pmin(inc * pPhasein, max) - 
     pmin(pmax(agi - startPhaseout, 0) * pPhaseout, max)
 }
 
 ##Child tax credit
 #https://www.irs.gov/publications/p972/ar02.html
-ctc <- function(agi, income, incTax, nkids = 2) {
+#https://www.irs.gov/pub/irs-pdf/f1040s8.pdf
+ctc <- function(agi, income, incTax, 
+                filingStatus = c("Married/Joint", "Married/Separate",
+                                 "Head of Household", "Single"), 
+                nkids) {
+  filingStatus <- match.arg(filingStatus)
   incTax <- pmax(0, incTax)
   ctc <- nkids * 1000
-  #reduce max ctc by 5% of income over $110,000 rounded up to nearest thousand
-  ctc <- pmax(ctc - pmax(ceiling((agi - 110000) / 1000) * 1000 * .05, 0), 0)
+  phaseOut <- switch(filingStatus,
+                     "Married/Joint" = 110000,
+                     "Married/Seperate" = 55000,
+                     "Head of Household" = 75000,
+                     "Single" = 75000)
+  #reduce max ctc by 5% of agi over phaseout threshold rounded up to nearest
+  #thousand
+  ctc <- pmax(ctc - pmax(ceiling((agi - phaseOut) / 1000) * 1000 * .05, 0), 0)
   #creditable ctc is smaller of remaning ctc (after taxes reduced to 0) or 15%
   #of earned income over $3K
   actc <- pmax(pmin(ctc - incTax, .15 * pmax(income - 3000, 0)), 0)
@@ -83,16 +122,27 @@ ctc <- function(agi, income, incTax, nkids = 2) {
   pmin(ctc, incTax) + actc
 }
 
+applyCredits <- function(calculatedTaxes, filingStatus, nKids) {
+  mutate(calculatedTaxes, 
+         `Income Tax` = `Income Tax` - eitc(income, agi, filingStatus, nKids),
+         `Income Tax` = `Income Tax` - 
+           ctc(agi, income, `Income Tax`, filingStatus, nKids))
+}
+
 brackets <- getBrackets(filingStatus, useCorporateWelfare, nKids)
 cur <- taxes(incomes, brackets$currentIndBrackets, totalDeduction)
-cur <- cur %>% mutate(set = "Current", payer = "Individual",
-              `Income Tax` = `Income Tax` - eitc(income, agi),
-              `Income Tax` = `Income Tax` - ctc(agi, income, `Income Tax`))
+# cur <- cur %>% mutate(set = "Current", payer = "Individual",
+#               `Income Tax` = `Income Tax` - eitc(income, agi),
+#               `Income Tax` = `Income Tax` - ctc(agi, income, `Income Tax`))
+cur <- cur %>% mutate(set = "Current", payer = "Individual") %>%
+  applyCredits(filingStatus, nKids)
 bern <- taxes(incomes, brackets$bernieIndBrackets, totalDeduction)
-bern <- bern %>% mutate(set = "Bernie", payer = "Individual",
-                      `Income Tax` = `Income Tax` - eitc(income, agi),
-                      `Income Tax` = `Income Tax` - 
-                        ctc(agi, income, `Income Tax`))
+# bern <- bern %>% mutate(set = "Bernie", payer = "Individual",
+#                       `Income Tax` = `Income Tax` - eitc(income, agi),
+#                       `Income Tax` = `Income Tax` - 
+#                         ctc(agi, income, `Income Tax`))
+bern <- bern %>% mutate(set = "Bernie", payer = "Individual") %>%
+  applyCredits(filingStatus, nKids)
 curEmp <- taxes(incomes, brackets$currentEmpBrackets)
 curEmp$set <- "Current"
 curEmp$payer <- "Employer"
