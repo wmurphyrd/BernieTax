@@ -10,11 +10,11 @@ savings <- savings[whichSavings,
                    c("income", "delta", "mid", 
                      "eTaxCur", "eTaxBern")]
 savings$percentile <- getPercentileForIncome(savings$income)
-savings$hjust <- c(-.01, .5, .5, -.05)
+savings$hjust <- c(.5, .5, .5, -.05)
 savings$fill <- ifelse(savings$delta < 0, "Increase", "Savings")
 savings$delta <- round(abs(savings$delta))
 savings$lab <- paste0(savings$fill, ": ", scales::dollar(savings$delta))
-savings$mid[1] <- savings$mid[1] + .015
+#savings$mid[1] <- savings$mid[1] + .015
 topBracketSize <- 1 - acs$centile[nrow(acs) - 1]
 topBracketSize <- round(topBracketSize, 
                         digits = ifelse(topBracketSize < .01, 3, 2))
@@ -68,13 +68,13 @@ ggplot(filter(datDiff, payer == "Individual"), aes(x = percentile)) +
         axis.title.y = element_text(margin = margin(0, 15, 0, 0)),
         axis.title.x = element_text(margin = margin(15, 0, 0, 0)),
         plot.title = element_text(margin = margin(0, 0, 30, 0), size = 40,
-                                  hjust = -.5),
+                                  hjust = 0),
         panel.grid.major.x = 
           element_line(colour = "grey80", size = 1, linetype = 2),
         panel.background = element_blank(),
         axis.ticks.x = element_blank()) +
   labs(y = "Tax and Healthcare Burden (% of income)", 
-       x = "Income for a Single Individual (USD)", 
+       x = "Income for a Single Male (USD)", 
        title = "Just How Much Would Bernie Sanders Tax Me?") +
   coord_cartesian(xlim = c(getPercentileForIncome(min(incomes)), 1.15)) +
   annotate("text", x = .275, y = .29, 

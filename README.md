@@ -3,8 +3,9 @@ This project compiles all of the proposed tax plans from Democratic
 Presidential Candidate Senator Bernie Sanders to determine the effective tax
 rates for individuals at different outcomes in comparison with current tax laws.
 
-The current settings are for a family of 4 living in a state that took the 
-Obamacare medicaid expansion. The following items are included in the 
+Update Feb 1st: Support added for all filing types and family sizes. Polished plots included for family of 4, single male, and single female. 
+
+The following items are included in the 
 calculations:
 
 * Federal Income Tax
@@ -30,4 +31,4 @@ The impact of the following [proposals from Bernie Sanders](https://berniesander
 
 Note that impacts on investment earnings are not included in this project.
 
-![Comparative Effective Tax Rates](bernietax.png)
+![Comparative Effective Tax Rates](bernietax_color.png)

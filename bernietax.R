@@ -5,9 +5,9 @@ source("bernietaxFunctions.R")
 useCorporateWelfare <- F
 filingStatus <- "Single"
 nKids <- 0
-#filingStatus <- "Married/Joint"
-#nKids <- 2
-sex <- "F"
+filingStatus <- "Married/Joint"
+nKids <- 2
+sex <- "M"
 
 taxNamesInd <- c("Income Tax", "Social Security Tax", "Medicare Tax",
                  "Medicare-for-all Tax", "Family Leave Tax", 
@@ -112,7 +112,11 @@ png("bernieTax_color.png", width = 1024, height = 768)
 if(filingStatus == "Married/Joint") {
   source("berniePlot.R", print.eval = T)
 } else {
-  source("berniePlotSingle.R", print.eval = T)
+  if(sex == "M") {
+    source("berniePlotSingle.R", print.eval = T)
+  } else {
+    source("berniePlotSingleF.R", print.eval = T)
+  }
 }
 dev.off()
 
