@@ -217,14 +217,27 @@ getBrackets <- function(filingStatus = c("Married/Joint", "Married/Separate",
   healthEmpBracketsBernie <- nilBracket
   
   # https://www.irs.gov/publications/p15/ar02.html#en_US_2016_publink1000202402
+  # https://www.irs.gov/pub/irs-pdf/f940.pdf
+  # For unemployment tax, including the full 6% as discounts apply only when
+  # equivalent amounts are paid to state unemployment program
   payrollTaxBracketsCurrent <- data.frame(
-    bottom = 0, cap = Inf, rate = .0765, extra = 0, deduct = 0
+    bottom = c(0, 7000, 118500), 
+    cap = c(7000, 118500, Inf), 
+    #unemployment tax ends at $7,000, soc sec tax ends at $118,500
+    rate = c(.062 + .0145 + 0.06, .062 + .0145, .0145), 
+    extra = 0, deduct = 0
   )
   
   # https://berniesanders.com/issues/medicare-for-all-2/
-  # https://www.irs.gov/publications/p15/ar02.html
   payrollTaxBracketsBernie <- data.frame(
-    bottom = 0, cap = Inf, rate = .0765 + .062, extra = 0, deduct = 0
+    bottom = c(0, 7000, 118500, 250000), 
+    cap = c(7000, 118500, 250000, Inf), 
+    #unemployment tax ends at $7,000, 
+    #soc sec tax ends at $118,500 and resumes at $250,000 (with backlog)
+    #medicare for all tax added to all brackets
+    rate = c(.062 + .0145 + 0.06, .062 + .0145, .0145, .0145 + .062) + .062, 
+    extra = c(0, 0, 0, 8153), 
+    deduct = 0
   )
   
   # not current used - represents the what employers save by paying so little

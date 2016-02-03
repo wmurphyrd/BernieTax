@@ -5,9 +5,9 @@ source("bernietaxFunctions.R")
 useCorporateWelfare <- F
 filingStatus <- "Single"
 nKids <- 0
-filingStatus <- "Married/Joint"
-nKids <- 2
-sex <- "M"
+#filingStatus <- "Married/Joint"
+#nKids <- 2
+sex <- "F"
 
 taxNamesInd <- c("Income Tax", "Social Security Tax", "Medicare Tax",
                  "Medicare-for-all Tax", "Family Leave Tax", 
@@ -30,7 +30,7 @@ getPercentileForIncome <- approxfun(acs$income, acs$centile)
 centileLabeler <- function(breaks) {
   pct <- paste0(round(breaks*100), "th Percentile")
   pct[breaks == .5] <- "Median"
-  incs <- scales::dollar(getIncomeForPercentile(breaks))
+  incs <- scales::dollar(round(getIncomeForPercentile(breaks)))
   paste(incs, pct, sep = "\n")
 }
 
