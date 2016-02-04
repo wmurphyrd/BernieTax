@@ -5,6 +5,8 @@ rates for individuals at different outcomes in comparison with current tax laws.
 
 Update Feb 1st: Support added for all filing types and family sizes. Polished plots included for family of 4, single male, and single female. 
 
+Update Feb 4th: Added berniePooled.R and berniePooledPlot.R for calculations that pool the employee and employer burden together. Also added federal unemploymen tax and corrected some errors in the calculations of the employer-paid taxes. This analysis is flawed in that it suggests any savings that the employer experiences would be visible to the employee in the form of a raise. The result is that it makes the Bernie plan look better for the employee than it realy is for incomes from $34K to $228K. Even though it is flawed, it is presented as an example for many who claim that the two should be pooled. 
+
 The following items are included in the 
 calculations:
 
