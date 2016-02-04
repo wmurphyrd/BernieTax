@@ -11,16 +11,16 @@ trendColors <- c("#2d8cd8", "#48476f")
 #fillColors <- c("#1FC77F", "#FFB450")
 fillColors <- c("#21DC91", "#FF9400")
 #png("bernieBillions.png", width = 1024, height = 768)
-ggplot(filter(datDiff, payer == "Individual"), aes(x = income)) +
+ggplot(filter(pDatDiff, income >= 40000), aes(x = income)) +
   geom_ribbon(aes(ymax = iTop, ymin = iBottom, fill = "Increase")) +
   geom_ribbon(aes(ymax = dTop, ymin = dBottom, fill = "Savings")) +
   geom_line(aes(y = eTaxBern, color = "Bernie"), size = 2.75) +
   geom_line(aes(y = eTaxCur, color = "Current"), size = 2.75) +
   scale_x_log10(breaks = c(60000, 250000, 1000000, 10000000, 50000000),
                 labels = scales::dollar) +
-#   scale_x_continuous(breaks = c(.05, .25, .5, .75, .95), 
-#                      labels = centileLabeler) +
-  scale_y_continuous(labels = scales::percent, breaks = seq(-1,1, by = .1)) +
+  #   scale_x_continuous(breaks = c(.05, .25, .5, .75, .95), 
+  #                      labels = centileLabeler) +
+  scale_y_continuous(labels = scales::percent, breaks = seq(-1,1, by = .05)) +
   scale_color_manual("Tax Plan", values = trendColors) +
   scale_fill_manual("Change under Bernie's Plans", 
                     limits = c("Savings", "Increase"),
@@ -40,7 +40,7 @@ ggplot(filter(datDiff, payer == "Individual"), aes(x = income)) +
   labs(y = "Tax and Healthcare Burden (% of income)", 
        x = "Income for a Family of 4 (USD)", 
        title = "Just How Much Would Bernie Sanders Tax Billionaires?")  +
-   coord_cartesian(xlim = c(20000, 55000000)) 
+  coord_cartesian(xlim = c(40000, 55000000)) 
 #   annotate("text", x = .21, y = .33, 
 #            label = "Taxes + Healthcare Expense Now",
 #            angle = 0, hjust = 0, color = trendColors[2], size = 12,

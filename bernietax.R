@@ -3,10 +3,10 @@ source("bernieTaxBrackets.R")
 source("bernietaxFunctions.R")
 
 useCorporateWelfare <- F
-filingStatus <- "Single"
-nKids <- 0
-#filingStatus <- "Married/Joint"
-#nKids <- 2
+#filingStatus <- "Single"
+#nKids <- 0
+filingStatus <- "Married/Joint"
+nKids <- 2
 sex <- "F"
 
 taxNamesInd <- c("Income Tax", "Social Security Tax", "Medicare Tax",
@@ -16,6 +16,7 @@ taxNamesEmp <- c("Employer Healthcare\nContribution",
                  "Employer Payroll Tax", "Corporate Welfare")
 
 incomes <- seq(8000, 402000, by = 2000)
+#incomes <- seq(10000, 50000000, by = 10000)
 
 acs <- getCensusIncomes(filingStatus, sex)
 getIncomeForPercentile <- approxfun(acs$centile, acs$income)
@@ -108,17 +109,17 @@ datDiff <- inner_join(filter(datSum, set == "Bernie"),
 
 
 
-png("bernieTax_color.png", width = 1024, height = 768)
-if(filingStatus == "Married/Joint") {
-  source("berniePlot.R", print.eval = T)
-} else {
-  if(sex == "M") {
-    source("berniePlotSingle.R", print.eval = T)
-  } else {
-    source("berniePlotSingleF.R", print.eval = T)
-  }
-}
-dev.off()
+# png("bernieTax_color.png", width = 1024, height = 768)
+# if(filingStatus == "Married/Joint") {
+#   source("berniePlot.R", print.eval = T)
+# } else {
+#   if(sex == "M") {
+#     source("berniePlotSingle.R", print.eval = T)
+#   } else {
+#     source("berniePlotSingleF.R", print.eval = T)
+#   }
+# }
+# dev.off()
 
 
 
