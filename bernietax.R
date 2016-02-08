@@ -10,31 +10,32 @@ nKids <- 0
 #nKids <- 2
 sex <- "M"
 
-taxNamesInd <- c("Income Tax", "Social Security Tax", "Medicare Tax",
-                 "Medicare-for-all Tax", "Family Leave Tax", 
-                 "Healthcare Premiums", "Healthcare Expenses")
-taxNamesEmp <- c("Employer Healthcare\nContribution",
-                 "Employer Payroll Tax", "Corporate Welfare")
 
 incomes <- seq(8000, 402000, by = 2000)
 #incomes <- seq(10000, 50000000, by = 10000)
 
-acs <- getCensusIncomes(filingStatus, sex)
-getIncomeForPercentile <- approxfun(acs$centile, acs$income)
-getPercentileForIncome <- approxfun(acs$income, acs$centile)
-# glm modeling allows for smoother interpolation, but becomes inaccurate
-# at extremes. Linear interpolation used instead
-# mod <- glm(centile ~ income, acs, family = "binomial")
-# getPercentileForIncome <- function(x) {
-#   predict(mod, data.frame(income = x), type = "response")
+# acs <- getCensusIncomes(filingStatus, sex)
+# getIncomeForPercentile <- approxfun(acs$centile, acs$income)
+# getPercentileForIncome <- approxfun(acs$income, acs$centile)
+# # glm modeling allows for smoother interpolation, but becomes inaccurate
+# # at extremes. Linear interpolation used instead
+# # mod <- glm(centile ~ income, acs, family = "binomial")
+# # getPercentileForIncome <- function(x) {
+# #   predict(mod, data.frame(income = x), type = "response")
+# # }
+# 
+# centileLabeler <- function(breaks) {
+#   pct <- paste0(round(breaks*100), "th Percentile")
+#   pct[breaks == .5] <- "Median"
+#   incs <- scales::dollar(round(getIncomeForPercentile(breaks)))
+#   paste(incs, pct, sep = "\n")
 # }
 
-centileLabeler <- function(breaks) {
-  pct <- paste0(round(breaks*100), "th Percentile")
-  pct[breaks == .5] <- "Median"
-  incs <- scales::dollar(round(getIncomeForPercentile(breaks)))
-  paste(incs, pct, sep = "\n")
-}
+acsList <- getCensusIncomes(filingStatus, sex)
+acs <- acsList$acs
+getIncomeForPercentile <- acsList$getIncomeForPercentile
+getPercentileForIncome <- acsList$getPercentileForIncome
+centileLabeler <- acsList$centileLabeler
 
 incomes <- c(incomes, getIncomeForPercentile(c(.25, .5, .75)))
 #alternate for billionaires graph
@@ -48,25 +49,26 @@ incomes <- c(incomes, getIncomeForPercentile(c(.25, .5, .75)))
 #exPhaseOut <- pmin(ceiling(pmax(0, incomes - 309900) / 2500) * .02, 1)
 #exemptions <- exemptions - exemptions * exPhaseOut
 #totalDeduction <- standardDeduction + exemptions
-totalDeduction <- getDeduction(incomes, filingStatus, nKids)
-
-brackets <- getBrackets(filingStatus, useCorporateWelfare, nKids)
-cur <- taxes(incomes, brackets$currentIndBrackets, totalDeduction) %>% 
-  mutate(set = "Current", payer = "Individual") %>%
-  applyCredits(filingStatus, nKids)
-bern <- taxes(incomes, brackets$bernieIndBrackets, totalDeduction) %>% 
-  mutate(set = "Bernie", payer = "Individual") %>%
-  applyCredits(filingStatus, nKids)
-
-curEmp <- taxes(incomes, brackets$currentEmpBrackets) %>%
-  mutate(set = "Current", payer = "Employer")
-bernEmp <- taxes(incomes, brackets$bernieEmpBrackets) %>%
-  mutate(set = "Bernie", payer = "Employer")
-
-dat <- rbind(gather(rbind(cur, bern),
-              expense, amount, -income, -effectiveIncome, -set, -payer, -agi),
-             gather(rbind(curEmp, bernEmp),
-                    expense, amount, -income, -effectiveIncome, -set, -payer, -agi))
+# totalDeduction <- getDeduction(incomes, filingStatus, nKids)
+# 
+# brackets <- getBrackets(filingStatus, useCorporateWelfare, nKids)
+# cur <- taxes(incomes, brackets$currentIndBrackets, totalDeduction) %>% 
+#   mutate(set = "Current", payer = "Individual") %>%
+#   applyCredits(filingStatus, nKids)
+# bern <- taxes(incomes, brackets$bernieIndBrackets, totalDeduction) %>% 
+#   mutate(set = "Bernie", payer = "Individual") %>%
+#   applyCredits(filingStatus, nKids)
+# 
+# curEmp <- taxes(incomes, brackets$currentEmpBrackets) %>%
+#   mutate(set = "Current", payer = "Employer")
+# bernEmp <- taxes(incomes, brackets$bernieEmpBrackets) %>%
+#   mutate(set = "Bernie", payer = "Employer")
+# 
+# dat <- rbind(gather(rbind(cur, bern),
+#               expense, amount, -income, -effectiveIncome, -set, -payer, -agi),
+#              gather(rbind(curEmp, bernEmp),
+#                     expense, amount, -income, -effectiveIncome, -set, -payer, -agi))
+dat <- taxesByIncomes(incomes, filingStatus, nKids, sex, useCorporateWelfare)
 
 #total effective tax rates
 datSum <- dat %>% group_by(payer, set, income, effectiveIncome, agi) %>% 
@@ -126,15 +128,15 @@ if(writePlotToDisk) dev.off()
 
 
 
-#data table export
-export <- rbind(cur, bern) %>% merge(datSum)
-export <- rename(export, `Total Tax` = tTax, `Effective Tax Rate` = eTax,
-                 `Income Percentile` = percentile, Income = income) %>%
-  select(-agi, -effectiveIncome, -payer)
-export <- merge(filter(export, set == "Bernie") %>% select(-set),
-      filter(export, set == "Current") %>% select(-set),
-      by = c("Income", "Income Percentile"),
-      suffixes = c(" with Bernie", " at Present")) %>%
-  arrange(Income)
-
-write.csv(export, "BernieTaxExport.csv", row.names = F)
+#data table export (not currently working)
+# export <- rbind(cur, bern) %>% merge(datSum)
+# export <- rename(export, `Total Tax` = tTax, `Effective Tax Rate` = eTax,
+#                  `Income Percentile` = percentile, Income = income) %>%
+#   select(-agi, -effectiveIncome, -payer)
+# export <- merge(filter(export, set == "Bernie") %>% select(-set),
+#       filter(export, set == "Current") %>% select(-set),
+#       by = c("Income", "Income Percentile"),
+#       suffixes = c(" with Bernie", " at Present")) %>%
+#   arrange(Income)
+# 
+# write.csv(export, "BernieTaxExport.csv", row.names = F)

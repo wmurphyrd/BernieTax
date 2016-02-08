@@ -1,11 +1,15 @@
+taxNamesInd <- c("Income Tax", "Social Security Tax", "Medicare Tax",
+                 "Medicare-for-all Tax", "Family Leave Tax", 
+                 "Healthcare Premiums", "Healthcare Expenses")
+taxNamesEmp <- c("Employer Healthcare\nContribution",
+                 "Employer Payroll Tax", "Corporate Welfare")
 
 getBrackets <- function(filingStatus = c("Married/Joint", "Married/Separate",
                                          "Head of Household", "Single"),
                         useCorporateWelfare = F, nKids = 0) {
   filingStatus <- match.arg(filingStatus)
-  nilBracket <- data.frame(
-    bottom = 0, cap = Inf, rate = 0, extra = 0, deduct = 0
-  )
+  nilBracket <- data.frame(bottom = 0, cap = Inf, rate = 0, 
+                           extra = 0, deduct = 0)
   
   
   #http://www.bankrate.com/finance/taxes/tax-brackets.aspx

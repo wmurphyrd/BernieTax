@@ -51,6 +51,32 @@ getCensusIncomes <- function(filingStatus, sex) {
   tops <- as.numeric(regmatches(tops, regexpr("[[:digit:]]+$", tops)))
   t$income <- c(tops, t$income[nrow(t)])
   t
+  getIncomeForPercentile <- approxfun(t$centile, t$income)
+  getPercentileForIncome <- approxfun(t$income, t$centile)
+  # glm modeling allows for smoother interpolation, but becomes inaccurate
+  # at extremes. Linear interpolation used instead
+  # mod <- glm(centile ~ income, acs, family = "binomial")
+  # getPercentileForIncome <- function(x) {
+  #   predict(mod, data.frame(income = x), type = "response")
+  # }
+  
+  centileLabeler <- function(breaks) {
+    #browser()
+    incs <- scales::dollar(round(getIncomeForPercentile(breaks)))
+    topBracket <- which(breaks == 1)
+    if(length(topBracket)) {
+      breaks[topBracket] <- 1 - t$centile[nrow(t) - 1]
+      breaks[topBracket] <- round(breaks[topBracket],
+                                digits = ifelse(breaks[topBracket] < .01, 3, 2))
+    }
+    pct <- paste0(round(breaks * 100), "th Percentile")
+    pct[breaks == .5] <- "Median"
+    pct[topBracket] <- paste0("Top ", breaks[topBracket] * 100, "%")
+    paste(incs, pct, sep = "\n")
+  }
+  list(acs = t, getIncomeForPercentile = getIncomeForPercentile,
+       getPercentileForIncome = getPercentileForIncome, 
+       centileLabeler = centileLabeler)
 }
 
 ##Functions to implement tax laws
@@ -59,21 +85,21 @@ getCensusIncomes <- function(filingStatus, sex) {
 #https://www.irs.com/articles/2015-federal-tax-rates-personal-exemptions-and-standard-deductions
 #https://www.irs.gov/publications/p17/ch03.html
 getDeduction <- function(incomes, 
-                         filingStatus = c("Married/Joint", "Married/Seperate",
+                         filingStatus = c("Married/Joint", "Married/Separate",
                                           "Head of Household", "Single"),
                          nkids) {
   filingStatus <- match.arg(filingStatus)
   # https://www.irs.com/articles/2015-federal-tax-rates-personal-exemptions-and-standard-deductions
   standardDeduction <- switch(filingStatus,
                               "Married/Joint" = 12600,
-                              "Married/Seperate" = 6300,
+                              "Married/Separate" = 6300,
                               "Head of Household" = 9250,
                               "Single" = 6300)
   # https://www.irs.gov/publications/p17/ch03.html
   exemptions <- (ifelse(grepl("Married", filingStatus), 2, 1) + nKids) * 4000
   exPhaseOutStart <- switch(filingStatus,
                             "Married/Joint" = 309900,
-                            "Married/Seperate" = 154950,
+                            "Married/Separate" = 154950,
                             "Head of Household" = 284050,
                             "Single" = 258250)
   exPhaseOut <- 
@@ -120,7 +146,7 @@ ctc <- function(agi, income, incTax,
   ctc <- nkids * 1000
   phaseOut <- switch(filingStatus,
                      "Married/Joint" = 110000,
-                     "Married/Seperate" = 55000,
+                     "Married/Separate" = 55000,
                      "Head of Household" = 75000,
                      "Single" = 75000)
   #reduce max ctc by 5% of agi over phaseout threshold rounded up to nearest
@@ -132,4 +158,30 @@ ctc <- function(agi, income, incTax,
   #credit is full ctc up to the point that taxes are reduced to zero, plus
   #credtiable portion of the remainder
   pmin(ctc, incTax) + actc
+}
+
+
+taxesByIncomes <- function(incomes, filingStatus, nKids, sex, 
+                           useCorporateWelfare = F) {
+
+  totalDeduction <- getDeduction(incomes, filingStatus, nKids)
+  
+  brackets <- getBrackets(filingStatus, useCorporateWelfare, nKids)
+  cur <- taxes(incomes, brackets$currentIndBrackets, totalDeduction) %>% 
+    mutate(set = "Current", payer = "Individual") %>%
+    applyCredits(filingStatus, nKids)
+  bern <- taxes(incomes, brackets$bernieIndBrackets, totalDeduction) %>% 
+    mutate(set = "Bernie", payer = "Individual") %>%
+    applyCredits(filingStatus, nKids)
+  
+  curEmp <- taxes(incomes, brackets$currentEmpBrackets) %>%
+    mutate(set = "Current", payer = "Employer")
+  bernEmp <- taxes(incomes, brackets$bernieEmpBrackets) %>%
+    mutate(set = "Bernie", payer = "Employer")
+  
+  dat <- rbind(gather(rbind(cur, bern),
+                      expense, amount, -income, -effectiveIncome, -set, -payer, -agi),
+               gather(rbind(curEmp, bernEmp),
+                      expense, amount, -income, -effectiveIncome, -set, -payer, -agi))
+  dat
 }
