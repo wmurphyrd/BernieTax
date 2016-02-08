@@ -69,7 +69,11 @@ getCensusIncomes <- function(filingStatus, sex) {
       breaks[topBracket] <- round(breaks[topBracket],
                                 digits = ifelse(breaks[topBracket] < .01, 3, 2))
     }
-    pct <- paste0(round(breaks * 100), "th Percentile")
+    pct <- round(breaks * 100)
+    isFirst <- as.numeric(substring(as.character(pct), 
+                                    nchar(as.character(pct)), 
+                                    nchar(as.character(pct)))) == 1
+    pct <- paste0(pct, ifelse(isFirst, "st", "th"),  " Percentile")
     pct[breaks == .5] <- "Median"
     pct[topBracket] <- paste0("Top ", breaks[topBracket] * 100, "%")
     paste(incs, pct, sep = "\n")
