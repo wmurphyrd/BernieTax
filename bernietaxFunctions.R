@@ -96,7 +96,7 @@ getDeduction <- function(incomes,
                               "Head of Household" = 9250,
                               "Single" = 6300)
   # https://www.irs.gov/publications/p17/ch03.html
-  exemptions <- (ifelse(grepl("Married", filingStatus), 2, 1) + nKids) * 4000
+  exemptions <- (ifelse(filingStatus == "Married/Joint", 2, 1) + nKids) * 4000
   exPhaseOutStart <- switch(filingStatus,
                             "Married/Joint" = 309900,
                             "Married/Separate" = 154950,

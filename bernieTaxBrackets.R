@@ -135,8 +135,8 @@ getBrackets <- function(filingStatus = c("Married/Joint", "Married/Separate",
   
   #federal poverty level
   #http://familiesusa.org/product/federal-poverty-guidelines
-  houseSize <- ifelse(grepl("Married", filingStatus), 2, 1) + nKids
-  fpl <- switch(pmin(ifelse(grepl("Married", filingStatus), 2, 1) + nKids, 8),
+  houseSize <- ifelse(filingStatus == "Married/Joint", 2, 1) + nKids
+  fpl <- switch(pmin(houseSize, 8),
                 11770, 15930, 20090, 24250, 28410, 32570, 36730, 40890)
   
   # Anyone earning above the medicaid threshold should eligible for
