@@ -185,3 +185,23 @@ taxesByIncomes <- function(incomes, filingStatus, nKids, sex,
                       expense, amount, -income, -effectiveIncome, -set, -payer, -agi))
   dat
 }
+
+netTaxDifferences <- function(dat, acsList) {
+  #total effective tax rates
+  datSum <- dat %>% group_by(payer, set, income, effectiveIncome, agi) %>% 
+    summarize(tTax = sum(amount)) %>% ungroup %>% 
+    mutate(eTax = tTax / effectiveIncome,
+           payer = factor(payer, levels = c("Individual", "Employer")),
+           percentile = acsList$getPercentileForIncome(income))
+
+  #differences between plans / savings data
+  inner_join(filter(datSum, set == "Bernie"), 
+             filter(datSum, set == "Current"), 
+             by = c("payer", "income", "percentile")) %>%
+    rename(eTaxBern = eTax.x, eTaxCur = eTax.y,
+           tTaxBern = tTax.x, tTaxCur = tTax.y) %>%
+    mutate(increase = eTaxBern > eTaxCur, delta = tTaxCur - tTaxBern,
+           lab = paste0(ifelse(increase, "Increase: ", "Savings: "), 
+                        scales::dollar(abs(round(delta)))))
+  
+}

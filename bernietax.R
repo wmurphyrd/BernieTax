@@ -10,26 +10,8 @@ nKids <- 0
 #nKids <- 2
 sex <- "M"
 
-
 incomes <- seq(8000, 402000, by = 2000)
 #incomes <- seq(10000, 50000000, by = 10000)
-
-# acs <- getCensusIncomes(filingStatus, sex)
-# getIncomeForPercentile <- approxfun(acs$centile, acs$income)
-# getPercentileForIncome <- approxfun(acs$income, acs$centile)
-# # glm modeling allows for smoother interpolation, but becomes inaccurate
-# # at extremes. Linear interpolation used instead
-# # mod <- glm(centile ~ income, acs, family = "binomial")
-# # getPercentileForIncome <- function(x) {
-# #   predict(mod, data.frame(income = x), type = "response")
-# # }
-# 
-# centileLabeler <- function(breaks) {
-#   pct <- paste0(round(breaks*100), "th Percentile")
-#   pct[breaks == .5] <- "Median"
-#   incs <- scales::dollar(round(getIncomeForPercentile(breaks)))
-#   paste(incs, pct, sep = "\n")
-# }
 
 acsList <- getCensusIncomes(filingStatus, sex)
 acs <- acsList$acs
@@ -38,36 +20,7 @@ getPercentileForIncome <- acsList$getPercentileForIncome
 centileLabeler <- acsList$centileLabeler
 
 incomes <- c(incomes, getIncomeForPercentile(c(.25, .5, .75)))
-#alternate for billionaires graph
-#incomes <- seq(10000, 50000000, by = 10000)
 
-
-#https://www.irs.com/articles/2015-federal-tax-rates-personal-exemptions-and-standard-deductions
-#standardDeduction <- 12600
-#https://www.irs.gov/publications/p17/ch03.html
-#exemptions <- 4 * 4000
-#exPhaseOut <- pmin(ceiling(pmax(0, incomes - 309900) / 2500) * .02, 1)
-#exemptions <- exemptions - exemptions * exPhaseOut
-#totalDeduction <- standardDeduction + exemptions
-# totalDeduction <- getDeduction(incomes, filingStatus, nKids)
-# 
-# brackets <- getBrackets(filingStatus, useCorporateWelfare, nKids)
-# cur <- taxes(incomes, brackets$currentIndBrackets, totalDeduction) %>% 
-#   mutate(set = "Current", payer = "Individual") %>%
-#   applyCredits(filingStatus, nKids)
-# bern <- taxes(incomes, brackets$bernieIndBrackets, totalDeduction) %>% 
-#   mutate(set = "Bernie", payer = "Individual") %>%
-#   applyCredits(filingStatus, nKids)
-# 
-# curEmp <- taxes(incomes, brackets$currentEmpBrackets) %>%
-#   mutate(set = "Current", payer = "Employer")
-# bernEmp <- taxes(incomes, brackets$bernieEmpBrackets) %>%
-#   mutate(set = "Bernie", payer = "Employer")
-# 
-# dat <- rbind(gather(rbind(cur, bern),
-#               expense, amount, -income, -effectiveIncome, -set, -payer, -agi),
-#              gather(rbind(curEmp, bernEmp),
-#                     expense, amount, -income, -effectiveIncome, -set, -payer, -agi))
 dat <- taxesByIncomes(incomes, filingStatus, nKids, sex, useCorporateWelfare)
 
 #total effective tax rates
@@ -75,24 +28,6 @@ datSum <- dat %>% group_by(payer, set, income, effectiveIncome, agi) %>%
   summarize(tTax = sum(amount)) %>% ungroup %>% 
   mutate(eTax = tTax / effectiveIncome,
          payer = factor(payer, levels = c("Individual", "Employer")))
-
-
-##income distribution data from US census, 2014 family incomes
-#https://www.census.gov/hhes/www/cpstables/032015/faminc/toc.htm
-#https://www.census.gov/hhes/www/cpstables/032015/perinc/pinc11_000.htm
-# acs <- read_excel("finc07.xls", skip = 8)[c(-1, -46), 1:3]
-# acs <- acs %>% rename(income = `Mean \n Income (dollars)`) %>% 
-#   mutate(prop = Number / sum(Number), centile = cumsum(prop),
-#          payer = "Population")
-
-
-# percentiles <- data.frame(p = c(seq(.25, .75, by = .25), .95))
-# percentiles <- mutate(percentiles, income = getIncomeForPercentile(p),
-#                       labs = paste0(as.character(p * 100), "th Percentile"),
-#                       xlabs = paste(scales::dollar(income), labs, sep = "\n"))
-# percentiles$xlabs[percentiles$p == .5] <- 
-#   sub("50th Percentile", "Median", percentiles$xlabs[percentiles$p == .5])
-
 
 
 datSum <- mutate(datSum, percentile = getPercentileForIncome(income))
@@ -109,9 +44,6 @@ datDiff <- inner_join(filter(datSum, set == "Bernie"),
          dBottom = ifelse(!increase, eTaxBern, NA))
 
 
-
-
-
 if(writePlotToDisk) png("bernieTax_color.png", width = 1024, height = 768)
 
 if(filingStatus == "Married/Joint") {
@@ -125,7 +57,6 @@ if(filingStatus == "Married/Joint") {
 }
 
 if(writePlotToDisk) dev.off()
-
 
 
 #data table export (not currently working)
