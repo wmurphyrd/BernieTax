@@ -85,8 +85,8 @@ barStylePlot <- function(filingStatus, nKids, sex,
                            cumsum(pmax(eTax, 0)), labely),
            pctLabelJust = ifelse(eTax < .015, .5, NA) + 
              .6 * grepl("Income Tax", expenseGroup) +
-             -.7 * grepl("Healthcare [TO]", expenseGroup),
-           pctLabelText = ifelse(eTax > .002, 
+             -.5 * grepl("Healthcare [TO]", expenseGroup),
+           pctLabelText = ifelse(eTax >= .0035, 
                                  scales::percent(round(eTax, 3)), ""))
   
   centileLabeler <- function(x) {
@@ -116,8 +116,9 @@ barStylePlot <- function(filingStatus, nKids, sex,
   savings <- netTaxDifferences(dat, acsList)
   savings <- savings %>%
     filter(payer == "Individual") %>%
-    mutate(labely = eTaxBern,
-           hjust = -.15,
+    mutate(labely = pmin(eTaxBern, eTaxCur),
+           set = ifelse(increase, "Current", "Bernie"),
+           hjust = -.3,
            fillKey = ifelse(increase, 
                             "Current Healthcare Out-of-Pocket",
                             "Bernie Healthcare Tax"))
@@ -125,8 +126,9 @@ barStylePlot <- function(filingStatus, nKids, sex,
   
   savings <- dat2 %>% 
     ungroup() %>% 
-    filter(set == "Bernie") %>% 
-    select(income, offset) %>%
+#     filter(set == "Bernie") %>% 
+#     select(income, offset) %>%
+    select(income, set, offset) %>%
     unique %>% 
     inner_join(savings)
   

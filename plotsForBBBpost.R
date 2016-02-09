@@ -7,7 +7,10 @@ barStylePlot("Single", 0, "M", customIncomes = extraIncomes)
 
 barStylePlot("Single", 0, "M", "pool", customIncomes = extraIncomes)
 
-png("bartest.png", 768, 1024)
-barStylePlot("Married/Joint", 2, "M", "pool", customIncomes = extraIncomes) + 
-  coord_flip(ylim = c(0, .9), xlim = c(2.9, 11.3))
+png("bartest.png", 768, 1037)
+barStylePlot("Single", 0, "F", "ignore", customIncomes = extraIncomes) + 
+  coord_flip(ylim = c(0, .6), xlim = c(1.7, 10.5)) + 
+  labs(x = "", y = "", title = "") +
+  theme(legend.position  = "none",
+        plot.margin  = grid::unit(c(2.7,0,1.25,.25), "lines"))
 dev.off()
