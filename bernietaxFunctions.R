@@ -166,27 +166,37 @@ ctc <- function(agi, income, incTax,
 
 
 taxesByIncomes <- function(incomes, filingStatus, nKids, sex, 
+                           employer = c("ignore", "split", "pool"),
                            useCorporateWelfare = F) {
-
+  employer = match.arg(employer)
   totalDeduction <- getDeduction(incomes, filingStatus, nKids)
   
   brackets <- getBrackets(filingStatus, useCorporateWelfare, nKids)
-  cur <- taxes(incomes, brackets$currentIndBrackets, totalDeduction) %>% 
+  cb <- brackets$currentIndBracket
+  bb <- brackets$bernieIndBrackets
+  if(employer == "pool") {
+    cb <- c(cb, brackets$currentEmpBrackets)
+    bb <- c(bb, brackets$bernieEmpBrackets)
+  }
+  cur <- taxes(incomes, cb, totalDeduction) %>% 
     mutate(set = "Current", payer = "Individual") %>%
     applyCredits(filingStatus, nKids)
-  bern <- taxes(incomes, brackets$bernieIndBrackets, totalDeduction) %>% 
+  bern <- taxes(incomes, bb, totalDeduction) %>% 
     mutate(set = "Bernie", payer = "Individual") %>%
     applyCredits(filingStatus, nKids)
   
-  curEmp <- taxes(incomes, brackets$currentEmpBrackets) %>%
-    mutate(set = "Current", payer = "Employer")
-  bernEmp <- taxes(incomes, brackets$bernieEmpBrackets) %>%
-    mutate(set = "Bernie", payer = "Employer")
-  
-  dat <- rbind(gather(rbind(cur, bern),
-                      expense, amount, -income, -effectiveIncome, -set, -payer, -agi),
-               gather(rbind(curEmp, bernEmp),
-                      expense, amount, -income, -effectiveIncome, -set, -payer, -agi))
+  dat <- gather(rbind(cur, bern), expense, amount, 
+                -income, -effectiveIncome, -set, -payer, -agi)
+  if(employer == "split") {
+    curEmp <- taxes(incomes, brackets$currentEmpBrackets) %>%
+      mutate(set = "Current", payer = "Employer")
+    bernEmp <- taxes(incomes, brackets$bernieEmpBrackets) %>%
+      mutate(set = "Bernie", payer = "Employer")
+    
+    dat <- rbind(dat, gather(rbind(curEmp, bernEmp),
+                             expense, amount, 
+                             -income, -effectiveIncome, -set, -payer, -agi))
+  }
   dat
 }
 
