@@ -75,7 +75,7 @@ getCensusIncomes <- function(filingStatus, sex) {
                                     nchar(as.character(pct)))) == 1
     pct <- paste0(pct, ifelse(isFirst, "st", "th"),  " Percentile")
     pct[breaks == .5] <- "Median"
-    pct[topBracket] <- paste0("Top ", breaks[topBracket] * 100, "%")
+    pct[topBracket] <- paste0("Top ", breaks[topBracket] * 100, "% Average")
     paste(incs, pct, sep = "\n")
   }
   list(acs = t, getIncomeForPercentile = getIncomeForPercentile,
@@ -91,7 +91,7 @@ getCensusIncomes <- function(filingStatus, sex) {
 getDeduction <- function(incomes, 
                          filingStatus = c("Married/Joint", "Married/Separate",
                                           "Head of Household", "Single"),
-                         nkids) {
+                         nKids) {
   filingStatus <- match.arg(filingStatus)
   # https://www.irs.com/articles/2015-federal-tax-rates-personal-exemptions-and-standard-deductions
   standardDeduction <- switch(filingStatus,
@@ -166,7 +166,7 @@ ctc <- function(agi, income, incTax,
 
 
 taxesByIncomes <- function(incomes, filingStatus, nKids, sex, 
-                           employer = c("ignore", "split", "pool"),
+                           employer = c("ignore", "split", "isolate", "pool"),
                            useCorporateWelfare = F) {
   employer = match.arg(employer)
   totalDeduction <- getDeduction(incomes, filingStatus, nKids)
@@ -187,17 +187,18 @@ taxesByIncomes <- function(incomes, filingStatus, nKids, sex,
   
   dat <- gather(rbind(cur, bern), expense, amount, 
                 -income, -effectiveIncome, -set, -payer, -agi)
-  if(employer == "split") {
+  if(employer %in% c("split", "isolate")) {
     curEmp <- taxes(incomes, brackets$currentEmpBrackets) %>%
       mutate(set = "Current", payer = "Employer")
     bernEmp <- taxes(incomes, brackets$bernieEmpBrackets) %>%
       mutate(set = "Bernie", payer = "Employer")
-    
-    dat <- rbind(dat, gather(rbind(curEmp, bernEmp),
-                             expense, amount, 
-                             -income, -effectiveIncome, -set, -payer, -agi))
+    emps <- gather(rbind(curEmp, bernEmp), expense, amount, -income, 
+                   -effectiveIncome, -set, -payer, -agi)
   }
-  dat
+  switch(employer, 
+         "split" = rbind(dat, emps),
+         "isolate" = emps,
+         dat)
 }
 
 netTaxDifferences <- function(dat, acsList) {
