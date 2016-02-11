@@ -108,14 +108,15 @@ barStylePlot <- function(filingStatus, nKids, sex,
                blues(nrow(filter(cols, set == "Bernie"))))
   names(fillPal) <- cols$key
   
+  #find labels for lightest color of each palette for the label fill
+  lastBernColLab <- names(fillPal)[max(grep("Bernie", names(fillPal)))]
+  lastCurColLab <- names(fillPal)[max(grep("Current", names(fillPal)))]
   savings <- netTaxDifferences(dat, acsList)
   savings <- savings %>%
     mutate(labely = pmax(pmin(eTaxBern, eTaxCur), 0),
            set = ifelse(increase, "Current", "Bernie"),
            hjust = -.3,
-           fillKey = ifelse(increase, 
-                            "Current Healthcare Out-of-Pocket",
-                            "Bernie Healthcare Tax"))
+           fillKey = ifelse(increase, lastCurColLab, lastBernColLab))
   #Need correspnding x-axis offset positions to display savings labels in
   #correct place
   savings <- dat2 %>% 
