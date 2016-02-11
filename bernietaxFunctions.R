@@ -1,6 +1,6 @@
 ##Utility/workshorse functions
 #Calculate tax owed in a marginal tax system (different rates apply to portions
-#of income in differnet brackets) for a vector of incomes
+#of income in different brackets) for a vector of incomes
 tax <- function(brackets, income, deduction) {
   rowSums(do.call(mapply, c(FUN = function(bottom, cap, rate, extra, deduct){
     income <- income - deduction * deduct
@@ -69,7 +69,9 @@ getCensusIncomes <- function(filingStatus, sex) {
       breaks[topBracket] <- round(breaks[topBracket],
                                 digits = ifelse(breaks[topBracket] < .01, 3, 2))
     }
-    pct <- round(breaks * 100)
+    #pmin used to avoid rounding up to "100th percentile"
+    pct <- pmin(round(breaks * 100), 99)
+    hundos <- which(pct == 99)
     lastDig <- substring(as.character(pct), 
                                     nchar(as.character(pct)), 
                                     nchar(as.character(pct)))
@@ -81,6 +83,7 @@ getCensusIncomes <- function(filingStatus, sex) {
     pct <- paste0(pct, sapply(pct, getSuffix),  " Percentile")
     pct[breaks == .5] <- "Median"
     pct[topBracket] <- paste0("Top ", breaks[topBracket] * 100, "% Average")
+    pct[hundos] <- paste0(">", pct[hundos])
     paste(incs, pct, sep = "\n")
   }
   list(acs = t, getIncomeForPercentile = getIncomeForPercentile,

@@ -35,7 +35,7 @@ barStylePlot <- function(filingStatus, nKids, sex,
   #avoid ploting two nearby incomes with landmark incomes are near common
   #percentiles
   commonPercentiles <- unlist(sapply(c(.25, .5, .75, .95), function(x) {
-    x[!any(abs(x - na.omit(acsList$getPercentileForIncome(incomes))) < .05)]
+    x[!any(abs(x - na.omit(acsList$getPercentileForIncome(incomes))) < .04)]
   }))
   commonPercentiles <- acsList$getIncomeForPercentile(c(.05, commonPercentiles))
   incomes <- sort(unique(c(incomes, commonPercentiles)))
@@ -51,7 +51,7 @@ barStylePlot <- function(filingStatus, nKids, sex,
            set = factor(set, levels = c("Current", "Bernie")),
            incomeFactor = factor(income, levels = incomes),
            offset = (as.numeric(set) - (length(levels(set)) + 1) / 2) / 
-             (length(levels(set)) + .3) + as.numeric(incomeFactor),
+             (length(levels(set)) + .6) + as.numeric(incomeFactor),
            expenseGroup = factor(expense))
   levels(dat2$expenseGroup) <- list("Income Tax" = c("Income Tax"), 
                                     "Payroll Taxes" = 
@@ -143,14 +143,13 @@ barStylePlot <- function(filingStatus, nKids, sex,
     stat_function(fun = dlnorm, args = denseFun$estimate,
                   geom = "area", fill = "grey20") +
     geom_bar(position = "stack", stat = "identity",
-             data = filter(dat2, set == "Bernie"), width = 0.4) +
+             data = filter(dat2, set == "Bernie"), width = 0.35) +
     geom_bar(position = "stack", stat = "identity",
-             data = filter(dat2, set == "Current"), width = 0.4) +
+             data = filter(dat2, set == "Current"), width = 0.35) +
     geom_text(aes(y = labely, label = pctLabelText, 
                   hjust = pctLabelJust), fontface = "bold") +
     geom_label(aes(y = labely, label = lab, hjust = hjust, fill = fillKey),
-               data = savings, size = 4.5,
-               label.padding = grid::unit(0.15, "lines")) +
+               data = savings, size = 4.5) +
     scale_fill_manual("Expense", values = fillPal) +
     scale_x_reverse(breaks = seq_along(incomes), labels = centileLabeler) +
     scale_y_continuous(labels = scales::percent, breaks = seq(0, 1, by = .1)) +
