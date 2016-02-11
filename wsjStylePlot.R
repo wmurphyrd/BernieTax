@@ -5,35 +5,33 @@ source("bernieTaxBrackets.R")
 source("bernietaxFunctions.R")
 
 barStylePlot <- function(filingStatus, nKids, sex, 
-                         employer = c("ignore", "isolate", "pool"),
+                         employer = c("ignore", "isolate", "split", "pool"),
                          customIncomes = numeric(0)) {
   employer = match.arg(employer)
 
   acsList <- getCensusIncomes(filingStatus, sex)
 
-  #find best incomes to display
+  #get wide range of incomes to find a few landmark incomes to display
   incomeRange <- c(seq(min(acsList$acs$income), 
                        max(acsList$acs$income), by = 1000),
                    max(acsList$acs$income))
   dat <- taxesByIncomes(incomeRange, filingStatus, nKids, sex, employer) 
   savings <- netTaxDifferences(dat, acsList)
 
-  # find breakeven point as income level with smallest savings that is greater
-  # than the lowest income level with savings
+  # find breakeven point as income level with smallest savings that is greater 
+  # than the lowest income level with savings 
   savings <- arrange(savings, income)
   startIncome <- savings$income[min(which(savings$delta > 0))]
   savings <- filter(savings, income > startIncome)
-  # breakeven <- savings$income[which.min(abs(savings$delta))]
   breakeven <- savings$income[which.max(ifelse(savings$delta > 0, NA, 
-                                               savings$delta))]
-
+                                                 savings$delta))]
   maxSavings <- savings$income[which.max(savings$delta)]
-
+  
   #choose breakeven point, common percentiles, max savings, highest group, and
   #any custom incomes as incomes to display
-  incomes <- c(min(acsList$acs$income), breakeven, maxSavings,
+  incomes <- c(min(acsList$acs$income), maxSavings,
                max(acsList$acs$income), customIncomes)
-  
+  if(employer != "split") incomes <- c(incomes, breakeven)
   #avoid ploting two nearby incomes with landmark incomes are near common
   #percentiles
   commonPercentiles <- unlist(sapply(c(.25, .5, .75, .95), function(x) {
@@ -41,16 +39,6 @@ barStylePlot <- function(filingStatus, nKids, sex,
   }))
   commonPercentiles <- acsList$getIncomeForPercentile(c(.05, commonPercentiles))
   incomes <- sort(unique(c(incomes, commonPercentiles)))
-#   commonPercentiles <- commonPercentiles[
-#     abs(acsList$getPercentileForIncome(c(breakeven, maxSavings)) - 
-#           commonPercentiles) < .05]
-  
-  #choose breakeven point, common percentiles, max savings, highest group, and
-  #any custom incomes as incomes to display
-#   incomes <- sort(unique(c(min(acsList$acs$income), breakeven, maxSavings,
-#                            acsList$getIncomeForPercentile(commonPercentiles),
-#                            max(acsList$acs$income),
-#                            customIncomes)))
 
   incomeScaleFun <- approxfun(incomes, seq_along(incomes))
   denseDistr <- rep(acsList$acs$income, acsList$acs$Number)
@@ -106,8 +94,8 @@ barStylePlot <- function(filingStatus, nKids, sex,
 #                               ifelse(inc == breakeven, "\n(Cross-over Point)",
 #                                      ""))))
     paste0(lab, ifelse(inc == maxSavings, "\n(Maximum Savings)", 
-                       ifelse(inc == breakeven, "\n(Cross-over Point)",
-                              "")))
+                       ifelse(inc == breakeven, 
+                              "\n(Cross-over Point)","")))
   }
   
   #Create a parellel ramp palettes in two colors for bar groups
@@ -122,13 +110,14 @@ barStylePlot <- function(filingStatus, nKids, sex,
   
   savings <- netTaxDifferences(dat, acsList)
   savings <- savings %>%
-    #filter(payer == "Individual") %>%
     mutate(labely = pmax(pmin(eTaxBern, eTaxCur), 0),
            set = ifelse(increase, "Current", "Bernie"),
            hjust = -.3,
            fillKey = ifelse(increase, 
                             "Current Healthcare Out-of-Pocket",
                             "Bernie Healthcare Tax"))
+  #Need correspnding x-axis offset positions to display savings labels in
+  #correct place
   savings <- dat2 %>% 
     ungroup() %>% 
     select(income, set, offset) %>%
@@ -148,8 +137,8 @@ barStylePlot <- function(filingStatus, nKids, sex,
                                                 ifelse(nKids > 1, "ren", "")),
                                ""))))
   
-  ggplot(dat2, aes(x = offset, y = eTax, 
-                   fill = paste(set, expenseGroup))) +
+  plt <- ggplot(dat2, aes(x = offset, y = eTax, 
+                          fill = paste(set, expenseGroup))) +
     stat_function(fun = dlnorm, args = denseFun$estimate,
                   geom = "area", fill = "grey20") +
     geom_bar(position = "stack", stat = "identity",
@@ -168,5 +157,7 @@ barStylePlot <- function(filingStatus, nKids, sex,
     coord_flip() +
     labs(x = "Income", y = "Effective Tax Rate with Healthcare Burden",
          title = title) +
-    theme(legend.position = "bottom", text = element_text(size = 18))
+    theme(legend.position = "bottom", text = element_text(size = 18)) 
+  if(employer == "split") plt <- plt + facet_grid(~payer)
+  plt
 }

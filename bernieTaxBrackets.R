@@ -11,6 +11,11 @@ getBrackets <- function(filingStatus = c("Married/Joint", "Married/Separate",
   nilBracket <- data.frame(bottom = 0, cap = Inf, rate = 0, 
                            extra = 0, deduct = 0)
   
+  #federal poverty level
+  #http://familiesusa.org/product/federal-poverty-guidelines
+  houseSize <- ifelse(filingStatus == "Married/Joint", 2, 1) + nKids
+  fpl <- switch(pmin(houseSize, 8),
+                11770, 15930, 20090, 24250, 28410, 32570, 36730, 40890)
   
   #http://www.bankrate.com/finance/taxes/tax-brackets.aspx
   #https://www.irs.com/articles/2015-federal-tax-rates-personal-exemptions-and-standard-deductions
@@ -133,12 +138,7 @@ getBrackets <- function(filingStatus = c("Married/Joint", "Married/Separate",
     deduct = 0
   )
   
-  #federal poverty level
-  #http://familiesusa.org/product/federal-poverty-guidelines
-  houseSize <- ifelse(filingStatus == "Married/Joint", 2, 1) + nKids
-  fpl <- switch(pmin(houseSize, 8),
-                11770, 15930, 20090, 24250, 28410, 32570, 36730, 40890)
-  
+
   # Anyone earning above the medicaid threshold should eligible for
   # employer sponsored coverage under Obamacare, so Obamacare exchange plans
   # and tax credits are not included.
@@ -148,8 +148,8 @@ getBrackets <- function(filingStatus = c("Married/Joint", "Married/Separate",
   # Using KFF for singles because milliman doesn't have info on singles 
   # http://kff.org/health-costs/report/2015-employer-health-benefits-survey/
   healthPremBracketsCurrent <- switch(
-    filingStatus, 
-    "Married/Joint" = data.frame(
+    as.character(houseSize > 1), 
+    "TRUE" = data.frame(
       bottom = c(0, fpl * 1.33),
       cap = c(fpl * 1.33, Inf),
       rate = c(0, 0),
@@ -171,11 +171,11 @@ getBrackets <- function(filingStatus = c("Married/Joint", "Married/Separate",
   #http://www.milliman.com/uploadedFiles/insight/Periodicals/mmi/2015-MMI.pdf 
   #page 7
   #http://obamacarefacts.com/obamacares-medicaid-expansion/
-  # No good out-of-poclet estimate for singles, using avg deductible from KFF
+  # No good out-of-pocket estimate for singles, using avg deductible from KFF
   # http://kff.org/health-costs/report/2015-employer-health-benefits-survey/
   healthPocketBracketsCurrent <- switch(
-    filingStatus, 
-    "Married/Joint" = data.frame(
+    as.character(houseSize > 1), 
+    "TRUE" = data.frame(
     bottom = c(0, fpl * 1.33),
     cap = c(fpl * 1.33, Inf),
     rate = c(.024, 0),
@@ -202,8 +202,8 @@ getBrackets <- function(filingStatus = c("Married/Joint", "Married/Separate",
   # Using KFF for singles because milliman doesn't have info on singles 
   # http://kff.org/health-costs/report/2015-employer-health-benefits-survey/
   healthEmpBracketsCurrent <- switch(
-    filingStatus,
-    "Married/Joint" = data.frame(
+    as.character(houseSize > 1),
+    "TRUE" = data.frame(
       bottom = c(0, fpl * 1.33),
       cap = c(fpl * 1.33, Inf),
       rate = 0,
