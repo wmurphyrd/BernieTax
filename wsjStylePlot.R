@@ -8,52 +8,56 @@ barStylePlot <- function(filingStatus, nKids, sex,
                          employer = c("ignore", "isolate", "pool"),
                          customIncomes = numeric(0)) {
   employer = match.arg(employer)
-  # load census data
+
   acsList <- getCensusIncomes(filingStatus, sex)
-  #if(any(is.na(customIncomes))) {
+
   #find best incomes to display
   incomeRange <- c(seq(min(acsList$acs$income), 
                        max(acsList$acs$income), by = 1000),
-                   max(acsList$acs$income),
-                   acsList$getIncomeForPercentile(c(.5, .75, .95)))
+                   max(acsList$acs$income))
   dat <- taxesByIncomes(incomeRange, filingStatus, nKids, sex, employer) 
   savings <- netTaxDifferences(dat, acsList)
-  #start with lowest income with no negative income tax (because negative numbers don't stack well)
-  startIncome <- min(group_by(dat, income) %>% 
-                       filter(all(amount >= 0)) %>% 
-                       magrittr::extract2("income"))
-  startIncomeLab <- ifelse(employer == "isolate", "", "\n(Income Tax Threshold)")
-  #find max savings
-  maxSavings <- savings$income[which.max(savings$delta)]
-  # Start income and max savings tend to be right next to each other, so just
-  # keep one
-  if(maxSavings > startIncome) {
-    if(acsList$getIncomeForPercentile(.25) > startIncome) {
-      startIncome <- acsList$getIncomeForPercentile(.25)
-      startIncomeLab <- ""
-    } else startIncome <- maxSavings
-  }
-  #find breakeven point
+
+  # find breakeven point as income level with smallest savings that is greater
+  # than the lowest income level with savings
+  savings <- arrange(savings, income)
+  startIncome <- savings$income[min(which(savings$delta > 0))]
   savings <- filter(savings, income > startIncome)
-  breakeven <- savings$income[which.min(abs(savings$delta)) + 1]
+  # breakeven <- savings$income[which.min(abs(savings$delta))]
+  breakeven <- savings$income[which.max(ifelse(savings$delta > 0, NA, 
+                                               savings$delta))]
+
+  maxSavings <- savings$income[which.max(savings$delta)]
+
+  #choose breakeven point, common percentiles, max savings, highest group, and
+  #any custom incomes as incomes to display
+  incomes <- c(min(acsList$acs$income), breakeven, maxSavings,
+               max(acsList$acs$income), customIncomes)
   
-  #choose lowest income without negative income tax, breakeven point, common
-  #percentiles, max savings, and highest group
-  incomes <- sort(unique(c(min(acsList$acs$income), startIncome, breakeven,
-                           maxSavings,
-                           acsList$getIncomeForPercentile(c(.5, .75, .95)),
-                           max(acsList$acs$income),
-                           customIncomes)))
-  #} else {
-#   if(any(!is.na(customIncomes))) {
-#     incomes <- customIncomes
-#   }
+  #avoid ploting two nearby incomes with landmark incomes are near common
+  #percentiles
+  commonPercentiles <- unlist(sapply(c(.25, .5, .75, .95), function(x) {
+    x[!any(abs(x - na.omit(acsList$getPercentileForIncome(incomes))) < .05)]
+  }))
+  commonPercentiles <- acsList$getIncomeForPercentile(c(.05, commonPercentiles))
+  incomes <- sort(unique(c(incomes, commonPercentiles)))
+#   commonPercentiles <- commonPercentiles[
+#     abs(acsList$getPercentileForIncome(c(breakeven, maxSavings)) - 
+#           commonPercentiles) < .05]
+  
+  #choose breakeven point, common percentiles, max savings, highest group, and
+  #any custom incomes as incomes to display
+#   incomes <- sort(unique(c(min(acsList$acs$income), breakeven, maxSavings,
+#                            acsList$getIncomeForPercentile(commonPercentiles),
+#                            max(acsList$acs$income),
+#                            customIncomes)))
+
   incomeScaleFun <- approxfun(incomes, seq_along(incomes))
   denseDistr <- rep(acsList$acs$income, acsList$acs$Number)
   denseFun <- MASS::fitdistr(na.omit(incomeScaleFun(denseDistr)), "lognormal")
   
-  dat <- taxesByIncomes(incomes, filingStatus, nKids, sex, employer)          
-  #dat <- filter(dat, income %in% incomes)
+  dat <- taxesByIncomes(incomes, filingStatus, nKids, sex, employer)
+
   dat2 <- filter(dat, amount != 0) %>% 
     mutate(percentile = acsList$getPercentileForIncome(income),
            set = factor(set, levels = c("Current", "Bernie")),
@@ -79,14 +83,17 @@ barStylePlot <- function(filingStatus, nKids, sex,
     summarise(amount = sum(amount)) %>%
     group_by(payer, set, income) %>%
     mutate(eTax  = amount / effectiveIncome, 
-           labely = cumsum(pmax(eTax, 0)) - 0.5 * eTax,
-           labely = ifelse(eTax < .015 & grepl("Income Tax", expenseGroup), 0, labely),
-           labely = ifelse(eTax < .015 & grepl("Healthcare [TO]", expenseGroup), 
-                           cumsum(pmax(eTax, 0)), labely),
+           labely = cumsum(eTax) - 0.5 * eTax,
+           labely = ifelse(abs(eTax) < .015 & 
+                             grepl("Income Tax", expenseGroup), 
+                           0, labely),
+           labely = ifelse(abs(eTax) < .015 & 
+                             grepl("Healthcare [TO]", expenseGroup), 
+                           cumsum(eTax), labely),
            pctLabelJust = ifelse(eTax < .015, .5, NA) + 
              .6 * grepl("Income Tax", expenseGroup) +
              -.5 * grepl("Healthcare [TO]", expenseGroup),
-           pctLabelText = ifelse(eTax >= .0035, 
+           pctLabelText = ifelse((eTax >= .0035 | labely == 0) & labely >= 0, 
                                  scales::percent(round(eTax, 3)), ""))
   
   centileLabeler <- function(x) {
@@ -94,19 +101,19 @@ barStylePlot <- function(filingStatus, nKids, sex,
     pct <- acsList$getPercentileForIncome(inc)
     lab <- ifelse(is.na(pct), scales::dollar(inc), 
                   acsList$centileLabeler(pct))
-    paste0(lab, ifelse(inc ==  startIncome, startIncomeLab,
-                       ifelse(inc == maxSavings, "\n(Maximum Savings)", 
-                              ifelse(inc == breakeven, "\n(Cross-over Point)",
-                                     ""))))
+#     paste0(lab, ifelse(inc ==  startIncome, startIncomeLab,
+#                        ifelse(inc == maxSavings, "\n(Maximum Savings)", 
+#                               ifelse(inc == breakeven, "\n(Cross-over Point)",
+#                                      ""))))
+    paste0(lab, ifelse(inc == maxSavings, "\n(Maximum Savings)", 
+                       ifelse(inc == breakeven, "\n(Cross-over Point)",
+                              "")))
   }
   
   #Create a parellel ramp palettes in two colors for bar groups
-  #cols <- expand.grid(exp = unique(dat2$expenseGroup), set = unique(dat2$set))
   cols <- dat2 %>% ungroup %>% select(exp = expenseGroup, set) %>% unique 
-  #cols <- arrange(cols, as.character(set), as.character(exp))
   cols <- arrange(cols, set, exp)
   cols$key <- paste(cols$set, cols$exp)
-  #cols$key <- factor(cols$key, levels = unique(cols$key))
   blues <- colorRampPalette(c("dodgerblue4", "slategray2"))
   greys <- colorRampPalette(c("grey40", "grey80"))
   fillPal <- c(greys(nrow(filter(cols, set == "Current"))),
@@ -115,19 +122,15 @@ barStylePlot <- function(filingStatus, nKids, sex,
   
   savings <- netTaxDifferences(dat, acsList)
   savings <- savings %>%
-    filter(payer == "Individual") %>%
-    mutate(labely = pmin(eTaxBern, eTaxCur),
+    #filter(payer == "Individual") %>%
+    mutate(labely = pmax(pmin(eTaxBern, eTaxCur), 0),
            set = ifelse(increase, "Current", "Bernie"),
            hjust = -.3,
            fillKey = ifelse(increase, 
                             "Current Healthcare Out-of-Pocket",
                             "Bernie Healthcare Tax"))
-  
-  
   savings <- dat2 %>% 
     ungroup() %>% 
-#     filter(set == "Bernie") %>% 
-#     select(income, offset) %>%
     select(income, set, offset) %>%
     unique %>% 
     inner_join(savings)
@@ -156,7 +159,8 @@ barStylePlot <- function(filingStatus, nKids, sex,
     geom_text(aes(y = labely, label = pctLabelText, 
                   hjust = pctLabelJust), fontface = "bold") +
     geom_label(aes(y = labely, label = lab, hjust = hjust, fill = fillKey),
-               data = savings, size = 4.5) +
+               data = savings, size = 4.5,
+               label.padding = grid::unit(0.15, "lines")) +
     scale_fill_manual("Expense", values = fillPal) +
     scale_x_reverse(breaks = seq_along(incomes), labels = centileLabeler) +
     scale_y_continuous(labels = scales::percent, breaks = seq(0, 1, by = .1)) +

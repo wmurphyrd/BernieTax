@@ -70,10 +70,15 @@ getCensusIncomes <- function(filingStatus, sex) {
                                 digits = ifelse(breaks[topBracket] < .01, 3, 2))
     }
     pct <- round(breaks * 100)
-    isFirst <- as.numeric(substring(as.character(pct), 
+    lastDig <- substring(as.character(pct), 
                                     nchar(as.character(pct)), 
-                                    nchar(as.character(pct)))) == 1
-    pct <- paste0(pct, ifelse(isFirst, "st", "th"),  " Percentile")
+                                    nchar(as.character(pct)))
+    getSuffix <- function(x) {
+      substring(as.character(x), nchar(as.character(x)), 
+                nchar(as.character(x))) %>%
+        switch("1" = "st", "2" = "nd", "3" = "rd", "th")
+    }
+    pct <- paste0(pct, sapply(pct, getSuffix),  " Percentile")
     pct[breaks == .5] <- "Median"
     pct[topBracket] <- paste0("Top ", breaks[topBracket] * 100, "% Average")
     paste(incs, pct, sep = "\n")
