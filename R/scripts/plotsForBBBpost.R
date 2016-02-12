@@ -10,3 +10,12 @@ barStylePlot("Single", 1, "F", "ignore") +
   theme(legend.position  = "none",
         plot.margin  = grid::unit(c(2.7,0,2.5,.25), "lines"))
 dev.off()
+
+#bachelors plot final
+png("img/png/barplot_bachelor.png", 768, 1037)
+barStylePlot("Single", 0, "M", "ignore") + 
+  coord_flip(ylim = c(0, .5), xlim = c(1.7, 8.1)) + 
+  labs(x = "", y = "", title = "") +
+  theme(legend.position  = "none",
+        plot.margin  = grid::unit(c(2.7,0,2.5,.25), "lines"))
+dev.off()
