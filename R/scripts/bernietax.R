@@ -1,6 +1,6 @@
 library(dplyr); library(tidyr); library(ggplot2); library(readxl)
-source("bernieTaxBrackets.R")
-source("bernietaxFunctions.R")
+source("R/functions/bernieTaxBrackets.R")
+source("R/functions/bernietaxFunctions.R")
 
 useCorporateWelfare <- F
 writePlotToDisk <- F
@@ -8,7 +8,7 @@ filingStatus <- "Single"
 nKids <- 0
 #filingStatus <- "Married/Joint"
 #nKids <- 2
-sex <- "M"
+sex <- "F"
 
 incomes <- seq(8000, 402000, by = 2000)
 #incomes <- seq(10000, 50000000, by = 10000)
@@ -21,7 +21,8 @@ centileLabeler <- acsList$centileLabeler
 
 incomes <- c(incomes, getIncomeForPercentile(c(.25, .5, .75)))
 
-dat <- taxesByIncomes(incomes, filingStatus, nKids, sex, useCorporateWelfare)
+dat <- taxesByIncomes(incomes, filingStatus, nKids, sex, 
+                      useCorporateWelfare = useCorporateWelfare)
 
 #total effective tax rates
 datSum <- dat %>% group_by(payer, set, income, effectiveIncome, agi) %>% 
@@ -44,15 +45,15 @@ datDiff <- inner_join(filter(datSum, set == "Bernie"),
          dBottom = ifelse(!increase, eTaxBern, NA))
 
 
-if(writePlotToDisk) png("bernieTax_color.png", width = 1024, height = 768)
+if(writePlotToDisk) png("img/png/bernieTax_color.png", width = 1024, height = 768)
 
 if(filingStatus == "Married/Joint") {
-  source("berniePlot.R", print.eval = T)
+  source("R/plots/berniePlot.R", print.eval = T)
 } else {
   if(sex == "M") {
-    source("berniePlotSingle.R", print.eval = T)
+    source("R/plots/berniePlotSingle.R", print.eval = T)
   } else {
-    source("berniePlotSingleF.R", print.eval = T)
+    source("R/plots/berniePlotSingleF.R", print.eval = T)
   }
 }
 

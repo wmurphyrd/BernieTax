@@ -1,8 +1,8 @@
 #total effective tax rates with employer contributions
 
 library(dplyr); library(tidyr); library(ggplot2); library(readxl)
-source("bernieTaxBrackets.R")
-source("bernietaxFunctions.R")
+source("R/functions/bernieTaxBrackets.R")
+source("R/functions/bernietaxFunctions.R")
 
 useCorporateWelfare <- F
 #filingStatus <- "Single"
@@ -20,9 +20,10 @@ taxNamesEmp <- c("Employer Healthcare\nContribution",
 #incomes <- seq(8000, 402000, by = 2000)
 incomes <- seq(10000, 50000000, by = 10000)
 
-acs <- getCensusIncomes(filingStatus, sex)
-getIncomeForPercentile <- approxfun(acs$centile, acs$income)
-getPercentileForIncome <- approxfun(acs$income, acs$centile)
+acsList <- getCensusIncomes(filingStatus, sex)
+getIncomeForPercentile <- acsList$getIncomeForPercentile
+getPercentileForIncome <- acsList$getPercentileForIncome
+acs <- acsList$acs
 # glm modeling allows for smoother interpolation, but becomes inaccurate
 # at extremes. Linear interpolation used instead
 # mod <- glm(centile ~ income, acs, family = "binomial")
@@ -30,12 +31,7 @@ getPercentileForIncome <- approxfun(acs$income, acs$centile)
 #   predict(mod, data.frame(income = x), type = "response")
 # }
 
-centileLabeler <- function(breaks) {
-  pct <- paste0(round(breaks*100), "th Percentile")
-  pct[breaks == .5] <- "Median"
-  incs <- scales::dollar(round(getIncomeForPercentile(breaks)))
-  paste(incs, pct, sep = "\n")
-}
+centileLabeler <- acsList$centileLabeler
 
 incomes <- c(incomes, getIncomeForPercentile(c(.25, .5, .75)))
 
@@ -75,6 +71,6 @@ pDatDiff <- inner_join(filter(pDatSum, set == "Bernie"),
          dBottom = ifelse(!increase, eTaxBern, NA))
 
 
-png("bernieBillionsWithEmpTax.png", width = 1024, height = 768)
-source("berniePooledPlot.R", print.eval = T)
+png("img/png/bernieBillionsWithEmpTax.png", width = 1024, height = 768)
+source("R/plots/berniePooledPlot.R", print.eval = T)
 dev.off()

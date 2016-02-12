@@ -1,4 +1,4 @@
-source("wsjStylePlot.R")
+source("R/plots/barStylePlot.R")
 
 extraIncomes <- c(2000000, 10000000, 50000000)
 

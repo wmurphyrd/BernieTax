@@ -1,8 +1,8 @@
 
 
 library(dplyr); library(tidyr); library(ggplot2); library(readxl)
-source("bernieTaxBrackets.R")
-source("bernietaxFunctions.R")
+source("R/functions/bernieTaxBrackets.R")
+source("R/functions/bernietaxFunctions.R")
 
 barStylePlot <- function(filingStatus, nKids, sex, 
                          employer = c("ignore", "isolate", "split", "pool"),

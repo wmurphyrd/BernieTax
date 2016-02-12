@@ -36,11 +36,11 @@ applyCredits <- function(calculatedTaxes, filingStatus, nKids) {
 # https://www.census.gov/hhes/www/cpstables/032015/perinc/pinc11_000.htm
 getCensusIncomes <- function(filingStatus, sex) {
   if(filingStatus == "Married/Joint") {
-    f <- "finc07.xls"
+    f <- "data/finc07.xls"
   } else if(sex == "M") {
-    f <- "pinc11_1.xls"
+    f <- "data/pinc11_1.xls"
   } else {
-    f <- "pinc11_2.xls"
+    f <- "data/pinc11_2.xls"
 
   }
   t <- read_excel(f, skip = 8)[c(-1, -46), 1:3] %>%
