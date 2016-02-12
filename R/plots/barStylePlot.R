@@ -141,7 +141,7 @@ barStylePlot <- function(filingStatus, nKids, sex,
   plt <- ggplot(dat2, aes(x = offset, y = eTax, 
                           fill = paste(set, expenseGroup))) +
     stat_function(fun = dlnorm, args = denseFun$estimate,
-                  geom = "area", fill = "grey20") +
+                  geom = "area", fill = "black", alpha = .75) +
     geom_bar(position = "stack", stat = "identity",
              data = filter(dat2, set == "Bernie"), width = 0.35) +
     geom_bar(position = "stack", stat = "identity",
