@@ -214,7 +214,6 @@ netTaxDifferences <- function(dat, acsList) {
   datSum <- dat %>% group_by(payer, set, income, effectiveIncome, agi) %>% 
     summarize(tTax = sum(amount)) %>% ungroup %>% 
     mutate(eTax = tTax / effectiveIncome,
-           payer = factor(payer, levels = c("Individual", "Employer")),
            percentile = acsList$getPercentileForIncome(income))
 
   #differences between plans / savings data

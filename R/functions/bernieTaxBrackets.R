@@ -2,7 +2,8 @@ taxNamesInd <- c("Income Tax", "Social Security Tax", "Medicare Tax",
                  "Medicare-for-all Tax", "Family Leave Tax", 
                  "Healthcare Premiums", "Healthcare Expenses")
 taxNamesEmp <- c("Employer Healthcare\nContribution",
-                 "Employer Payroll Tax", "Corporate Welfare")
+                 "Employer Payroll Tax", "Corporate Welfare", 
+                 "Employer Medicare-for-all Tax")
 
 getBrackets <- function(filingStatus = c("Married/Joint", "Married/Separate",
                                          "Head of Household", "Single"),
@@ -232,19 +233,28 @@ getBrackets <- function(filingStatus = c("Married/Joint", "Married/Separate",
     extra = 0, deduct = 0
   )
   
-  # https://berniesanders.com/issues/medicare-for-all-2/
+  #https://www.ssa.gov/oact/solvency/BSanders_20150323.pdf
+  # only difference is the Soc Sec cap removal - follows the same pattern as 
+  # invidiual soc sec tax
   payrollTaxBracketsBernie <- data.frame(
     bottom = c(0, 7000, 118500, 250000), 
     cap = c(7000, 118500, 250000, Inf), 
     #unemployment tax ends at $7,000, 
     #soc sec tax ends at $118,500 and resumes at $250,000 (with backlog)
     #medicare for all tax added to all brackets
-    rate = c(.062 + .0145 + 0.06, .062 + .0145, .0145, .0145 + .062) + .062, 
+    rate = c(.062 + .0145 + 0.06, .062 + .0145, .0145, .0145 + .062), 
     extra = c(0, 0, 0, 8153), 
     deduct = 0
   )
   
-  # not current used - represents the what employers save by paying so little
+  payrollMFABracketsCurrent <- nilBracket
+  
+  # https://berniesanders.com/issues/medicare-for-all-2/
+  payrollMFABracketsBernie <- data.frame(
+    bottom = 0, cap = Inf, rate = .062, extra = 0, deduct = 0
+  )
+  
+  # not currently used - represents the what employers save by paying so little
   # that their employees qualify for medicare
   corpWelfareGapCurrent <- data.frame(
     bottom = c(0, fpl * 1.33),
@@ -265,7 +275,8 @@ getBrackets <- function(filingStatus = c("Married/Joint", "Married/Separate",
                              healthPocketBracketsCurrent)
   currentEmpBrackets <- list(healthEmpBracketsCurrent,
                              payrollTaxBracketsCurrent,
-                             corpWelfareGapCurrent)
+                             corpWelfareGapCurrent,
+                             payrollMFABracketsCurrent)
   
   bernieIndBrackets <- list(incomeBracketsBernie,
                             ssBracketsBernie,
@@ -276,7 +287,8 @@ getBrackets <- function(filingStatus = c("Married/Joint", "Married/Separate",
                             healthPocketBracketsBernie)
   bernieEmpBrackets <- list(healthEmpBracketsBernie,
                             payrollTaxBracketsBernie,
-                            corpWelfareGapBernie)
+                            corpWelfareGapBernie,
+                            payrollMFABracketsBernie)
   
   names(currentIndBrackets) <- taxNamesInd
   names(bernieIndBrackets) <- taxNamesInd

@@ -45,6 +45,9 @@ barStylePlot <- function(filingStatus, nKids, sex,
   denseFun <- MASS::fitdistr(na.omit(incomeScaleFun(denseDistr)), "lognormal")
   
   dat <- taxesByIncomes(incomes, filingStatus, nKids, sex, employer)
+  dat$payer = factor(dat$payer)
+  levels(dat$payer) <- list("Personal Taxes" = "Individual",
+                             "Employer-Paid Taxes" = "Employer")
 
   dat2 <- filter(dat, amount != 0) %>% 
     mutate(percentile = acsList$getPercentileForIncome(income),
@@ -53,6 +56,7 @@ barStylePlot <- function(filingStatus, nKids, sex,
            offset = (as.numeric(set) - (length(levels(set)) + 1) / 2) / 
              (length(levels(set)) + .6) + as.numeric(incomeFactor),
            expenseGroup = factor(expense))
+
   levels(dat2$expenseGroup) <- list("Income Tax" = c("Income Tax"), 
                                     "Payroll Taxes" = 
                                       c("Social Security Tax",
@@ -60,7 +64,8 @@ barStylePlot <- function(filingStatus, nKids, sex,
                                         "Family Leave Tax",
                                         "Employer Payroll Tax"),
                                     "Healthcare Tax" = 
-                                      c("Medicare-for-all Tax"),
+                                      c("Medicare-for-all Tax",
+                                        "Employer Medicare-for-all Tax"),
                                     "Healthcare Premiums" = 
                                       c("Healthcare Premiums",
                                         "Employer Healthcare\nContribution"),
@@ -70,7 +75,9 @@ barStylePlot <- function(filingStatus, nKids, sex,
                    payer, expenseGroup) %>% 
     summarise(amount = sum(amount)) %>%
     group_by(payer, set, income) %>%
-    mutate(eTax  = amount / effectiveIncome, 
+    # effective income is only a useful concept when pooling employer/employee
+    mutate(eTax  = amount / ifelse(employer == "pool", 
+                                   effectiveIncome, income), 
            labely = cumsum(eTax) - 0.5 * eTax,
            labely = ifelse(abs(eTax) < .015 & 
                              grepl("Income Tax", expenseGroup), 
@@ -83,16 +90,12 @@ barStylePlot <- function(filingStatus, nKids, sex,
              -.5 * grepl("Healthcare [TO]", expenseGroup),
            pctLabelText = ifelse((eTax >= .0035 | labely == 0) & labely >= 0, 
                                  scales::percent(round(eTax, 3)), ""))
-  
+
   centileLabeler <- function(x) {
     inc <- incomes[as.numeric(x)]
     pct <- acsList$getPercentileForIncome(inc)
     lab <- ifelse(is.na(pct), scales::dollar(inc), 
                   acsList$centileLabeler(pct))
-#     paste0(lab, ifelse(inc ==  startIncome, startIncomeLab,
-#                        ifelse(inc == maxSavings, "\n(Maximum Savings)", 
-#                               ifelse(inc == breakeven, "\n(Cross-over Point)",
-#                                      ""))))
     paste0(lab, ifelse(inc == maxSavings, "\n(Maximum Savings)", 
                        ifelse(inc == breakeven, 
                               "\n(Cross-over Point)","")))
@@ -131,12 +134,13 @@ barStylePlot <- function(filingStatus, nKids, sex,
 #   ylims <- c(0, 1.2 * max(
 #     (dat2 %>% group_by(set, income) %>% summarise(eTax = sum(eTax)))$eTax))
   
-  title <- paste("Bernie Sanders Tax Plan Impact for", ifelse(filingStatus == "Married/Joint", 
-                  paste("Family of", nKids + 2), 
-                  paste("Single", ifelse(sex == "M", "Male", "Female"),
-                        ifelse(nKids > 0, paste0("with ", nKids, " Child",
-                                                ifelse(nKids > 1, "ren", "")),
-                               ""))))
+  title <- paste("Bernie Sanders Tax Plan Impact for", 
+                 ifelse(filingStatus == "Married/Joint", 
+                        paste("Family of", nKids + 2), 
+                        paste("Single", ifelse(sex == "M", "Male", "Female"),
+                              ifelse(nKids > 0, paste0("with ", nKids, " Child",
+                                                       ifelse(nKids > 1, "ren", 
+                                                              "")),""))))
   
   plt <- ggplot(dat2, aes(x = offset, y = eTax, 
                           fill = paste(set, expenseGroup))) +
