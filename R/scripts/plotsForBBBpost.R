@@ -33,5 +33,29 @@ barStylePlot("Married/Joint", 2, "M", "ignore", extraIncomes) +
 dev.off()
 
 #businesses plot
-barStylePlot("Married/Joint", 2, "M", "split") +
-  coord_flip(ylim = c(0, .45), xlim = c(1.85, 7.15))
+png("img/png/barplot_business.png", w, h)
+barStylePlot("Married/Joint", 2, "M", "isolate") +
+  coord_flip(ylim = c(0, .5), xlim = c(1.5, 7.15)) + 
+  labs(x = "", y = "", title = "") +
+  theme(legend.position  = "none",
+        plot.margin  = margins)
+dev.off()
+
+#pooled plot
+png("img/png/barplot_pooled.png", w, h)
+barStylePlot("Married/Joint", 2, "M", "pool", extraIncomes) +
+  coord_flip(ylim = c(0, .65), xlim = c(2.6, 10.05)) + 
+  labs(x = "", y = "", title = "") +
+  theme(legend.position  = "none",
+        plot.margin  = margins)
+dev.off()
+
+
+#family rehash plot
+png("img/png/barplot_family.png", w, h)
+barStylePlot("Married/Joint", 2, "M", "ignore") +
+  coord_flip(ylim = c(0, .42), xlim = c(1.7, 7.15)) + 
+  labs(x = "", y = "", title = "") +
+  theme(legend.position  = "none",
+        plot.margin  = margins)
+dev.off()
