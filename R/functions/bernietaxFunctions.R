@@ -10,10 +10,16 @@ tax <- function(brackets, income, deduction) {
 }
 
 #Apply tax function for multiple taxes to a vector of incomes
-taxes <- function(incomes, bracketsList, deductions = 0) {
+taxes <- function(incomes, bracketsList, deductions = 0,
+                  deductHealthCarePremiums = F) {
   names(incomes) <- as.character(incomes)
   ret <- sapply(bracketsList, tax, income = incomes, deduction = deductions)
   ret <- data.frame(ret, check.names = F)
+  if(deductHealthCarePremiums && !is.null(ret[["Healthcare Premiums"]])) {
+    ret <- sapply(bracketsList, tax, income = incomes, 
+                  deduction = deductions + ret[["Healthcare Premiums"]])
+    ret <- data.frame(ret, check.names = F)
+  }
   ret$income <- incomes
   ret$effectiveIncome <- incomes + 
     rowSums(ret[, na.omit(match(taxNamesEmp, names(ret)))], na.rm = T)
@@ -186,7 +192,7 @@ taxesByIncomes <- function(incomes, filingStatus, nKids, sex,
     cb <- c(cb, brackets$currentEmpBrackets)
     bb <- c(bb, brackets$bernieEmpBrackets)
   }
-  cur <- taxes(incomes, cb, totalDeduction) %>% 
+  cur <- taxes(incomes, cb, totalDeduction, deductHealthCarePremiums = T) %>% 
     mutate(set = "Current", payer = "Individual") %>%
     applyCredits(filingStatus, nKids)
   bern <- taxes(incomes, bb, totalDeduction) %>% 
