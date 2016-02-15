@@ -77,17 +77,17 @@ barStylePlot <- function(filingStatus, nKids, sex,
     group_by(payer, set, income) %>%
     # effective income is only a useful concept when pooling employer/employee
     mutate(eTax  = amount / ifelse(employer == "pool", 
-                                   effectiveIncome, income), 
+                                   effectiveIncome, income),
            labely = cumsum(eTax) - 0.5 * eTax,
            labely = ifelse(abs(eTax) < .017 & 
                              grepl("Income Tax", expenseGroup), 
                            0, labely),
            labely = ifelse(abs(eTax) < .017 & 
-                             grepl("Healthcare [TO]", expenseGroup), 
+                             grepl("Healthcare O", expenseGroup), 
                            cumsum(eTax), labely),
            pctLabelJust = ifelse(eTax < .017, .5, NA) + 
              .6 * grepl("Income Tax", expenseGroup) +
-             -.5 * grepl("Healthcare [TO]", expenseGroup),
+             -.5 * grepl("Healthcare O", expenseGroup),
            pctLabelText = ifelse((eTax >= .0035 | labely == 0) & 
                                    labely >= 0 & eTax > 0, 
                                  scales::percent(round(eTax, 3)), ""))

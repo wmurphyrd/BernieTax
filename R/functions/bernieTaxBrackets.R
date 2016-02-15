@@ -124,8 +124,10 @@ getBrackets <- function(filingStatus = c("Married/Joint", "Married/Separate",
   mfaBracketsCurrent <- nilBracket
   
   #https://berniesanders.com/issues/medicare-for-all-2/
+  #https://berniesanders.com/wp-content/uploads/2016/01/friedman-memo-1.pdf
+  # "The	2.2%	income	tax	applies	to	taxable	income as currently defined"
   mfaBracketsBernie <- data.frame(
-    bottom = 0, cap = Inf, rate = .022, extra = 0, deduct = 0
+    bottom = 0, cap = Inf, rate = .022, extra = 0, deduct = 1
   )
   
   familyLeaveBracketsCurrent <- nilBracket
@@ -191,10 +193,16 @@ getBrackets <- function(filingStatus = c("Married/Joint", "Married/Separate",
   )
   
   #https://berniesanders.com/issues/medicare-for-all-2/
+  #https://berniesanders.com/wp-content/uploads/2016/01/friedman-memo-1.pdf 
+  # "It is assumed that 20% of out-of-pocket spending is for activities that
+  # would not be covered because they are deemed not medically necessary"
+  # Therefore, we keep 20% of the current plan OOP estimate
   healthPremBracketsBernie <- nilBracket
   
   #https://berniesanders.com/issues/medicare-for-all-2/
-  healthPocketBracketsBernie <- nilBracket
+  healthPocketBracketsBernie <- healthPocketBracketsCurrent
+  healthPocketBracketsBernie$rate <- healthPocketBracketsBernie$rate * 0.2
+  healthPocketBracketsBernie$extra <- healthPocketBracketsBernie$extra * 0.2
   
   # Using Milliman index for families because estimate of actual out-of-pocket 
   # available. Differences between KFF and milliman for employer contribution
