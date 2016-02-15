@@ -88,7 +88,8 @@ barStylePlot <- function(filingStatus, nKids, sex,
            pctLabelJust = ifelse(eTax < .015, .5, NA) + 
              .6 * grepl("Income Tax", expenseGroup) +
              -.5 * grepl("Healthcare [TO]", expenseGroup),
-           pctLabelText = ifelse((eTax >= .0035 | labely == 0) & labely >= 0, 
+           pctLabelText = ifelse((eTax >= .0035 | labely == 0) & 
+                                   labely >= 0 & eTax > 0, 
                                  scales::percent(round(eTax, 3)), ""))
 
   centileLabeler <- function(x) {
