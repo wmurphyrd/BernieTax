@@ -26,7 +26,7 @@ dev.off()
 #billionaires plot
 png("img/png/barplot_billionaire.png", w, h)
 barStylePlot("Married/Joint", 2, "M", "ignore", extraIncomes) +
-  coord_flip(ylim = c(0, .63), xlim = c(3.7, 10.2)) + 
+  coord_flip(ylim = c(0, .63), xlim = c(4.5, 10.2)) + 
   labs(x = "", y = "", title = "") +
   theme(legend.position  = "none",
         plot.margin  = margins)
