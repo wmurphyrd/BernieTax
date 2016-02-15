@@ -79,13 +79,13 @@ barStylePlot <- function(filingStatus, nKids, sex,
     mutate(eTax  = amount / ifelse(employer == "pool", 
                                    effectiveIncome, income), 
            labely = cumsum(eTax) - 0.5 * eTax,
-           labely = ifelse(abs(eTax) < .015 & 
+           labely = ifelse(abs(eTax) < .017 & 
                              grepl("Income Tax", expenseGroup), 
                            0, labely),
-           labely = ifelse(abs(eTax) < .015 & 
+           labely = ifelse(abs(eTax) < .017 & 
                              grepl("Healthcare [TO]", expenseGroup), 
                            cumsum(eTax), labely),
-           pctLabelJust = ifelse(eTax < .015, .5, NA) + 
+           pctLabelJust = ifelse(eTax < .017, .5, NA) + 
              .6 * grepl("Income Tax", expenseGroup) +
              -.5 * grepl("Healthcare [TO]", expenseGroup),
            pctLabelText = ifelse((eTax >= .0035 | labely == 0) & 
