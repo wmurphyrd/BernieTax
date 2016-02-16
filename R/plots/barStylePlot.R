@@ -43,6 +43,10 @@ barStylePlot <- function(filingStatus, nKids, sex,
   incomeScaleFun <- approxfun(incomes, seq_along(incomes))
   denseDistr <- rep(acsList$acs$income, acsList$acs$Number)
   denseFun <- MASS::fitdistr(na.omit(incomeScaleFun(denseDistr)), "lognormal")
+  callDenseFun <- function(x) {
+    dlnorm(x, meanlog = denseFun$estimate["meanlog"], 
+           sdlog = denseFun$estimate["sdlog"])
+  }
   
   dat <- taxesByIncomes(incomes, filingStatus, nKids, sex, employer)
   dat$payer = factor(dat$payer)
@@ -78,19 +82,29 @@ barStylePlot <- function(filingStatus, nKids, sex,
     # effective income is only a useful concept when pooling employer/employee
     mutate(eTax  = amount / ifelse(employer == "pool", 
                                    effectiveIncome, income),
-           labely = cumsum(eTax) - 0.5 * eTax,
-           labely = ifelse(abs(eTax) < .017 & 
-                             grepl("Income Tax", expenseGroup), 
-                           0, labely),
-           labely = ifelse(abs(eTax) < .017 & 
-                             grepl("Healthcare O", expenseGroup), 
-                           cumsum(eTax), labely),
-           pctLabelJust = ifelse(eTax < .017, .5, NA) + 
-             .6 * grepl("Income Tax", expenseGroup) +
-             -.5 * grepl("Healthcare O", expenseGroup),
-           pctLabelText = ifelse((eTax >= .0035 | labely == 0) & 
+           # small numbers on the ends can be pushed outside of the bar for
+           # better display
+           labelyPos = ifelse(abs(eTax) < .017 & 
+                                grepl("Income Tax", expenseGroup), 
+                              "Left", 
+                              ifelse(abs(eTax) < .017 & 
+                                       grepl("Healthcare O", expenseGroup),
+                                     "Right", "Middle")),
+           labely = ifelse(labelyPos == "Left", 0, 
+                           ifelse(labelyPos == "Right", cumsum(eTax),
+                                  cumsum(eTax) - 0.5 * eTax)),
+           pctLabelJust = ifelse(labelyPos == "Middle", NA, .5) + 
+             .6 * (labelyPos == "Left") +
+             -.5 * (labelyPos == "Right"),
+           # hide text for very small amounts for cleaner display (unless they 
+           # are already pushed out). Also hide negative rates and rates that 
+           # would display left of 0
+           pctLabelText = ifelse((eTax >= .0035 | labelyPos != "Middle") & 
                                    labely >= 0 & eTax > 0, 
-                                 scales::percent(round(eTax, 3)), ""))
+                                 scales::percent(round(eTax, 3)), ""),
+           pctLabelCol = ifelse(labelyPos == "Right" & 
+                                  labely < callDenseFun(offset),
+                                "white", "black"))
 
   centileLabeler <- function(x) {
     inc <- incomes[as.numeric(x)]
@@ -151,11 +165,12 @@ barStylePlot <- function(filingStatus, nKids, sex,
              data = filter(dat2, set == "Bernie"), width = 0.35) +
     geom_bar(position = "stack", stat = "identity",
              data = filter(dat2, set == "Current"), width = 0.35) +
-    geom_text(aes(y = labely, label = pctLabelText, 
-                  hjust = pctLabelJust), fontface = "bold") +
+    geom_text(aes(y = labely, label = pctLabelText, hjust = pctLabelJust, 
+                  color = pctLabelCol), fontface = "bold") +
     geom_label(aes(y = labely, label = lab, hjust = hjust, fill = fillKey),
                data = savings, size = 4.5) +
     scale_fill_manual("Expense", values = fillPal) +
+    scale_color_manual(guide = F, values = c("black", "white")) +
     scale_x_reverse(breaks = seq_along(incomes), labels = centileLabeler) +
     scale_y_continuous(labels = scales::percent, breaks = seq(0, 1, by = .1)) +
     #coord_flip(xlim = xlims, ylim = ylims) +
