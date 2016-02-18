@@ -6,7 +6,8 @@ source("R/functions/bernietaxFunctions.R")
 
 barStylePlot <- function(filingStatus, nKids, sex, 
                          employer = c("ignore", "isolate", "split", "pool"),
-                         customIncomes = numeric(0)) {
+                         customIncomes = numeric(0), 
+                         labelPercents = T) {
   employer = match.arg(employer)
 
   acsList <- getCensusIncomes(filingStatus, sex)
@@ -165,8 +166,6 @@ barStylePlot <- function(filingStatus, nKids, sex,
              data = filter(dat2, set == "Bernie"), width = 0.35) +
     geom_bar(position = "stack", stat = "identity",
              data = filter(dat2, set == "Current"), width = 0.35) +
-    geom_text(aes(y = labely, label = pctLabelText, hjust = pctLabelJust, 
-                  color = pctLabelCol), fontface = "bold") +
     geom_label(aes(y = labely, label = lab, hjust = hjust, fill = fillKey),
                data = savings, size = 4.5) +
     scale_fill_manual("Expense", values = fillPal) +
@@ -179,5 +178,8 @@ barStylePlot <- function(filingStatus, nKids, sex,
          title = title) +
     theme(legend.position = "bottom", text = element_text(size = 18)) 
   if(employer == "split") plt <- plt + facet_grid(~payer)
+  if(labelPercents) plt <- plt +     
+    geom_text(aes(y = labely, label = pctLabelText, hjust = pctLabelJust, 
+                  color = pctLabelCol), fontface = "bold")
   plt
 }

@@ -59,3 +59,12 @@ barStylePlot("Married/Joint", 2, "M", "ignore") +
   theme(legend.position  = "none",
         plot.margin  = margins)
 dev.off()
+
+#split plot
+png("img/png/barplot_split.png", w, 600)
+barStylePlot("Married/Joint", 2, "M", "split", labelPercents = F) +
+  coord_flip(ylim = c(0, .6), xlim = c(1.7, 7.1)) + 
+  labs(x = "", y = "", title = "") +
+  theme(legend.position  = "none",
+        plot.margin  = margins)
+dev.off()
