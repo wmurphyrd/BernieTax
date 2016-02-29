@@ -1,6 +1,6 @@
 source("R/plots/barStylePlot.R")
 
-extraIncomes <- c(2000000, 10000000, 50000000)
+extraIncomes <- c(2000000, 10000000, 50000000, 1000000000)
 margins <- grid::unit(c(2.7,2.1,2.5,.25), "lines")
 w <- 800
 h <- 1037
@@ -55,15 +55,6 @@ dev.off()
 png("img/png/barplot_family.png", w, h)
 barStylePlot("Married/Joint", 2, "M", "ignore") +
   coord_flip(ylim = c(0, .42), xlim = c(1.7, 7.15)) + 
-  labs(x = "", y = "", title = "") +
-  theme(legend.position  = "none",
-        plot.margin  = margins)
-dev.off()
-
-#split plot
-png("img/png/barplot_split.png", w, 600)
-barStylePlot("Married/Joint", 2, "M", "split", labelPercents = F) +
-  coord_flip(ylim = c(0, .6), xlim = c(1.7, 7.1)) + 
   labs(x = "", y = "", title = "") +
   theme(legend.position  = "none",
         plot.margin  = margins)
