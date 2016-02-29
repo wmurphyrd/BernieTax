@@ -120,7 +120,7 @@ crossover <- inner_join(filter(datSum, set == "Bernie"),
 
 ybrks <- c(min(datSum$eTax), max(datSum$eTax),
            max(filter(datSum, set == "Current", income > 2500000)$eTax),
-           max(filter(datSum, income < 250000)$eTax), crossover)
+           max(filter(datSum, income < 250000)$eTax), crossover, .77)
 
 png("img/png/topmarginal_raw.png", w = 800, h = 400)
 ggplot(datSum, aes(x = income, y = eTax, color = set)) +
@@ -129,6 +129,7 @@ ggplot(datSum, aes(x = income, y = eTax, color = set)) +
                 labels = scales::dollar) +
   scale_y_continuous(labels = scales::percent, breaks = ybrks) +
   scale_color_manual("Tax Plan", values = trendColors) +
+  coord_cartesian(ylim = ybrks[c(1, length(ybrks))]) +
   theme(axis.line = element_blank(), 
         legend.position = "none", 
         text = element_text(size = 18),
