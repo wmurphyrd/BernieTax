@@ -105,7 +105,7 @@ getCensusIncomes <- function(filingStatus, sex) {
 getDeduction <- function(incomes, 
                          filingStatus = c("Married/Joint", "Married/Separate",
                                           "Head of Household", "Single"),
-                         nKids) {
+                         nKids, usePhaseOut = T) {
   filingStatus <- match.arg(filingStatus)
   # https://www.irs.com/articles/2015-federal-tax-rates-personal-exemptions-and-standard-deductions
   standardDeduction <- switch(filingStatus,
@@ -122,7 +122,7 @@ getDeduction <- function(incomes,
                             "Single" = 258250)
   exPhaseOut <- 
     pmin(ceiling(pmax(0, incomes - exPhaseOutStart) / 2500) * .02, 1)
-  standardDeduction + exemptions * (1 - exPhaseOut)
+  standardDeduction + exemptions * (1 - exPhaseOut * usePhaseOut)
   
 }
 
@@ -183,7 +183,9 @@ taxesByIncomes <- function(incomes, filingStatus, nKids, sex,
                            employer = c("ignore", "split", "isolate", "pool"),
                            useCorporateWelfare = F) {
   employer = match.arg(employer)
-  totalDeduction <- getDeduction(incomes, filingStatus, nKids)
+  totalDeductionCur <- getDeduction(incomes, filingStatus, nKids)
+  totalDeductionBern <- getDeduction(incomes, filingStatus, nKids, 
+                                     usePhaseOut = F)
   
   brackets <- getBrackets(filingStatus, useCorporateWelfare, nKids)
   cb <- brackets$currentIndBracket
@@ -192,10 +194,10 @@ taxesByIncomes <- function(incomes, filingStatus, nKids, sex,
     cb <- c(cb, brackets$currentEmpBrackets)
     bb <- c(bb, brackets$bernieEmpBrackets)
   }
-  cur <- taxes(incomes, cb, totalDeduction, deductHealthCarePremiums = T) %>% 
+  cur <- taxes(incomes, cb, totalDeductionCur, deductHealthCarePremiums = T) %>% 
     mutate(set = "Current", payer = "Individual") %>%
     applyCredits(filingStatus, nKids)
-  bern <- taxes(incomes, bb, totalDeduction) %>% 
+  bern <- taxes(incomes, bb, totalDeductionBern) %>% 
     mutate(set = "Bernie", payer = "Individual") %>%
     applyCredits(filingStatus, nKids)
   
