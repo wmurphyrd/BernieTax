@@ -112,11 +112,13 @@ getBrackets <- function(filingStatus = c("Married/Joint", "Married/Separate",
   #taxed unless the total earnings are > 250000 
   #($8,153 in taxes for the 118500 - 250000 range)
   #extra field compensates
+  # Correction: I was wrong about the gap income being taxed for incomes
+  # over 250000, changed extra back to 0
   ssBracketsBernie <- data.frame(
     bottom = c(0, 118500, 250000),  
     cap = c(118500, 250000, Inf),  
     rate = c(.062, 0, .062),
-    extra = c(0, 0, 8153),
+    extra = 0,
     deduct = 0
   )
   

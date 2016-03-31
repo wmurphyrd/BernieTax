@@ -3,12 +3,12 @@ source("R/functions/bernieTaxBrackets.R")
 source("R/functions/bernietaxFunctions.R")
 
 useCorporateWelfare <- F
-writePlotToDisk <- F
-filingStatus <- "Single"
-nKids <- 0
-#filingStatus <- "Married/Joint"
-#nKids <- 2
-sex <- "F"
+writePlotToDisk <- T
+#filingStatus <- "Single"
+#nKids <- 0
+filingStatus <- "Married/Joint"
+nKids <- 2
+sex <- "M"
 
 incomes <- seq(8000, 402000, by = 2000)
 #incomes <- seq(10000, 50000000, by = 10000)
